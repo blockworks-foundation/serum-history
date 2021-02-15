@@ -1,0 +1,34 @@
+{
+  "name": "serum-history",
+  "version": "1.0.0",
+  "description": "Aggregate Serum DEX history for display in TradingView charts.",
+  "main": "index.js",
+  "repository": "https://github.com/blockworks-foundation/serum-history",
+  "author": "Blockworks Foundation",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@types/bn.js": "^5.1.0",
+    "@types/jasmine": "^3.6.3",
+    "jasmine": "^3.6.4",
+    "jasmine-spec-reporter": "^6.0.0",
+    "jasmine-ts": "^0.3.0",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.1.4"
+  },
+  "dependencies": {
+    "@mango/client": "git+ssh://git@github.com:blockworks-foundation/mango-client-ts.git",
+    "@project-serum/serum": "^0.13.20",
+    "@solana/web3.js": "^0.91.0",
+    "tedis": "^0.1.12"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepare": "run-s clean build",
+    "shell": "node -e \"$(< shell)\" -i --experimental-repl-await",
+    "test": "jasmine-ts --config=jasmine.json"
+  }
+}

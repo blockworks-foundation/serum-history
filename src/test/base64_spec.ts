@@ -1,6 +1,7 @@
 import { Base64TradeCoder, Base64CandleCoder } from '../base64';
+import { TradeSide } from '../interfaces';
 
-const t = {id: '1234567890', price: 0.1234567, size: 1234567, ts: Date.now()};
+const t = {id: '1234567890', price: 0.1234567, side: TradeSide.Buy, size: 1234567, ts: Date.now()};
 const c = {open: 0.12345, close: 0.123456, high:  0.1234567, low:  0.12345678,
            volume: 1234567, vwap: 0.123456789, start: 1234567890, end: 1234567899};
 

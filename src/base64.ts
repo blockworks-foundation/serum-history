@@ -1,13 +1,14 @@
-import { Candle, Trade, Coder } from './interfaces';
+import { Candle, Trade, TradeSide, Coder } from './interfaces';
 
 export class Base64TradeCoder implements Coder<Trade> {
   constructor() {};
 
   encode(t: Trade): string {
-    const buf = Buffer.alloc(14);
+    const buf = Buffer.alloc(15);
     buf.writeFloatLE(t.price, 0);
     buf.writeFloatLE(t.size, 4);
     buf.writeUIntLE(t.ts, 8, 6);
+    buf.writeUInt8(t.side, 14);
     const base64 = buf.toString('base64');
     return base64;
   };
@@ -17,7 +18,8 @@ export class Base64TradeCoder implements Coder<Trade> {
     const trade = {
       price: buf.readFloatLE(0),
       size: buf.readFloatLE(4),
-      ts: buf.readUIntLE(8, 6)
+      ts: buf.readUIntLE(8, 6),
+      side: buf.readUInt8(14) as TradeSide,
     };
     return trade;
   };

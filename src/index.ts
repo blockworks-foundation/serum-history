@@ -1,9 +1,13 @@
 import { Account, Connection, PublicKey } from '@solana/web3.js';
-import { Market } from '@project-serum/serum';
-import { IDS } from '@mango/client';
-import { Tedis } from 'tedis';
-import { Order, Trade } from './interfaces';
-import { RedisStore } from './redis';
+import { Market, decodeEventQueue } from '@project-serum/serum';
+import cors from 'cors';
+import express from 'express';
+import { Tedis, TedisPool } from 'tedis';
+import { URL } from 'url';
+import { Order, Trade, TradeSide } from './interfaces';
+import { RedisConfig, RedisStore, createRedisStore } from './redis';
+import { encodeEvents } from './serum';
+
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -31,7 +35,11 @@ class OrderBuffer {
     const now = Date.now();
     const takerOrders = fills.filter(o => !o.eventFlags.maker);
     const allTrades = takerOrders.map( o => {
-      return { id: o.orderId.toString(16), price: o.price, size: o.size, ts: now };
+      return { id: o.orderId.toString(16),
+               price: o.price,
+               side: o.side === 'buy' ? TradeSide.Buy : TradeSide.Sell,
+               size: o.size,
+               ts: now };
     });
     const newTrades = allTrades.filter(t => !this.cache.has(t.id));
 
@@ -58,53 +66,242 @@ class OrderBuffer {
   }
 }
 
-// process data from cluster as it arrives
-async function observeMarket(clusterUrl: string, programId: string, marketName:string, marketPk: string, tradeCb: (trades: Trade[]) => void) {
-  const marketAddress = new PublicKey(marketPk);
-  const programKey = new PublicKey(programId);
+interface MarketConfig {
+  clusterUrl: string;
+  programId: string;
+  marketName: string;
+  marketPk: string;
+};
 
-  const connection = new Connection(clusterUrl);
-  console.log({ marketName, connection });
+async function collectTrades(m: MarketConfig, r: RedisConfig) {
 
+  const store = await createRedisStore(r, m.marketName);
+  const marketAddress = new PublicKey(m.marketPk);
+  const programKey = new PublicKey(m.programId);
+  const connection = new Connection(m.clusterUrl);
   const market = await Market.load(connection, marketAddress, undefined, programKey);
-  console.log({ marketName, market });
+
+  async function storeTrades(ts: Trade[]) {
+    if (ts.length > 0) {
+      console.log(m.marketName, ts.length);
+      for (let i = 0; i < ts.length; i += 1) {
+        await store.storeTrade(ts[i]);
+      }
+    }
+  };
 
   const orderBuffer = new OrderBuffer();
   while (true) {
     try {
       let fills = await market.loadFills(connection);
       let trades = orderBuffer.filterNewTrades(fills);
-      if (trades.length > 0) {
-        tradeCb(trades);
+      storeTrades(trades);
+    } catch (err) {
+      const error = err.toString().split('\n', 1)[0];
+      console.error(m.marketName, {error});
+    }
+
+    await sleep(10000);
+  }
+};
+
+
+
+
+async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
+  const store = await createRedisStore(r, m.marketName);
+  const marketAddress = new PublicKey(m.marketPk);
+  const programKey = new PublicKey(m.programId);
+  const connection = new Connection(m.clusterUrl);
+  const market = await Market.load(connection, marketAddress, undefined, programKey);
+
+  while (true) {
+    try {
+      const accountInfo = await connection.getAccountInfo(market['_decoded'].eventQueue);
+      if (accountInfo === null) {
+        throw new Error(`Event queue account for market ${m.marketName} not found`);
+      }
+      const events = decodeEventQueue(accountInfo.data, 1000).filter(e => e.eventFlags.fill);
+      if (events.length > 0) {
+        const encoded = encodeEvents(events);
+        store.storeBuffer(Date.now(), encoded);
       }
     } catch (err) {
       const error = err.toString().split('\n', 1)[0];
-      console.error({ marketName, error });
+      console.error(m.marketName, { error });
     }
-
-    await sleep(5000);
+    await sleep(10000);
   }
+};
+
+const redisUrl = new URL(process.env.REDISCLOUD_URL || 'redis://localhost:6379');
+const host = redisUrl.hostname;
+const port = parseInt(redisUrl.port);
+let password: string | undefined;
+if (redisUrl.password !== '') {
+  password = redisUrl.password;
 }
 
-const { log, error } = console;
-console.log = (...args: any[]) => log.bind(console)(new Date(), ...args);
-console.error = (...args: any[]) => log.bind(error)(new Date(), ...args);
+const network = "mainnet-beta"
+const clusterUrl = "https://solana-api.projectserum.com";
+const programIdV2 = "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o";
+const programIdV3 = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
+const marketsV2: Record<string, string> = {
+  "BTC/USDC": "CVfYa8RGXnuDBeGmniCcdkBwoLqVxh92xB1JqgRQx3F",
+  "BTC/USDT": "EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe",
+  "ETH/USDC": "H5uzEytiByuXt964KampmuNCurNDwkVVypkym75J2DQW",
+  "ETH/USDT": "5abZGhrELnUnfM9ZUnvK6XJPoBU5eShZwfFPkdhAC7o",
+  "RAY/USDC": "Bgz8EEMBjejAGSn6FdtKJkSGtvg4cuJUuRwaCBp28S3U",
+  "RAY/USDT": "HZyhLoyAnfQ72irTdqPdWo2oFL9zzXaBmAqN72iF3sdX",
+  "SOL/USDC": "7xMDbYTCqQEcK2aM9LbetGtNFJpzKdfXzLL5juaLh4GJ",
+  "SOL/USDT": "7xLk17EQQ5KLDLDe44wCmupJKJjTGd8hs3eSVVhCx932",
+  "SRM/USDC": "CDdR97S8y96v3To93aKvi3nCnjUrbuVSuumw8FLvbVeg",
+  "SRM/USDT": "H3APNWA8bZW2gLMSq5sRL41JSMmEJ648AqoEdDgLcdvB",
+  "USDT/USDC": "8EuuEwULFM7n7zthPjC7kA64LPRzYkpAyuLFiLuVg7D4",
+};
 
-let network = "mainnet-beta"
-let clusterUrl = IDS['cluster_urls'][network];
-let programId = IDS[network]['dex_program_id'];
-Object.entries(IDS[network]['spot_markets']).forEach(e => {
-  const [marketName, marketPk] = e;
-  console.log('start processing', {network, clusterUrl, marketName, marketPk});
-  const connection = new Tedis({
-    port: 6379,
-    host: "127.0.0.1"});
-  const store = new RedisStore(connection, marketName);
-  observeMarket(clusterUrl, programId, marketName as string, marketPk as string, async (trades) => {
-    console.log({marketName, trades});
-    for (let i = 0; i < trades.length; i += 1) {
-      await store.store(trades[i]);
-    }
+const marketsV3: Record<string, string> = {
+  "BTC/USDT": "5r8FfnbNYcQbS1m4CYmoHYGjBtu6bxfo6UJHNRfzPiYH",
+  "ETH/USDT": "71CtEComq2XdhGNbXBuYPmosAjMCPSedcgbNi5jDaGbR",
+};
+
+const nativeMarketsV3: Record<string, string> = {
+  "BTC/USDT": "C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4",
+  "ETH/USDT": "7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF",
+};
+
+const symbolsByPk = Object.assign({}, ...Object.entries(marketsV2).map(([a,b]) => ({ [b]: a })),
+                                      ...Object.entries(marketsV3).map(([a,b]) => ({ [b]: a })),
+                                      ...Object.entries(nativeMarketsV3).map(([a,b]) => ({ [b]: a })));
+
+function collectMarketData(programId: string, markets: Record<string, string>) {
+  Object.entries(markets).forEach(e => {
+    const [marketName, marketPk] = e;
+    const marketConfig = { clusterUrl, programId, marketName, marketPk } as MarketConfig;
+    collectTrades(marketConfig, { host, port, password, db: 0 });
+    //collectEventQueue(marketConfig, { host, port, password, db: 1});
   });
+};
+
+collectMarketData(programIdV2, marketsV2);
+collectMarketData(programIdV3, marketsV3);
+collectMarketData(programIdV3, nativeMarketsV3);
+
+
+interface TradingViewHistory {
+  s: string;
+  t: number[];
+  c: number[];
+  o: number[];
+  h: number[];
+  l: number[];
+  v: number[];
+};
+
+const app = express();
+app.use(cors());
+
+const redisConfig = { host, port, password, db: 0, max_conn: 200 };
+const pool = new TedisPool(redisConfig);
+
+const HOURS = 60 * MINUTES;
+const resolutions: {[id: string]: number | undefined} = {
+  "1": 1 * MINUTES,
+  "60": 1 * HOURS,
+  "240": 4 * HOURS,
+  "1D": 24 * HOURS
+};
+
+app.get('/tv/config', async (req,res) => {
+  const response = { supported_resolutions: Object.keys(resolutions), supports_group_request:false,
+                     supports_marks:false, supports_search:true, supports_timescale_marks:false };
+  res.send(response);
 });
+
+app.get('/tv/symbols', async (req, res) => {
+  const symbol = req.query.symbol as string;
+  const response = { name: symbol, ticker: symbol, description: symbol, type: "Spot", session: "24x7",
+                     exchange: "Mango", listed_exchange: "Mango", timezone: "Etc/UTC", has_intraday:true,
+                     supported_resolutions: Object.keys(resolutions), minmov: 1, pricescale:100 };
+  res.send(response);
+});
+
+app.get('/tv/history', async (req,res) => {
+  // parse
+  const marketName = req.query.symbol as string;
+  const marketPk = nativeMarketsV3[marketName] || marketsV3[marketName] || marketsV2[marketName];
+  const resolution = resolutions[req.query.resolution as string] as number;
+  let from = parseInt(req.query.from as string) * 1000;
+  let to = parseInt(req.query.to as string) * 1000;
+
+  // validate
+  const validSymbol = marketPk != undefined;
+  const validResolution = resolution != undefined;
+  const validFrom = true || new Date(from).getFullYear() >= 2021;
+
+  // respond
+  if (!(validSymbol && validResolution && validFrom)) {
+    const error = { s: "error", validSymbol, validResolution, validFrom };
+    console.error({req, error});
+    res.status(500).send(error);
+    return;
+  }
+
+  try {
+    const conn = await pool.getTedis();
+    try {
+      const store = new RedisStore(conn, marketName);
+
+      // snap candle boundaries to exact hours
+      from = Math.floor(from / resolution) * resolution;
+      to = Math.ceil(to / resolution) * resolution;
+
+      // ensure the candle is at least one period in length
+      if (from == to) {
+        to += resolution;
+      }
+      const candles = await store.loadCandles(resolution, from, to);
+      const response = { s: "ok",
+                         t: candles.map(c => c.start / 1000),
+                         c: candles.map(c => c.close),
+                         o: candles.map(c => c.open),
+                         h: candles.map(c => c.high),
+                         l: candles.map(c => c.low),
+                         v: candles.map(c => c.volume) };
+      res.send(response);
+      return;
+    } finally {
+      pool.putTedis(conn);
+    }
+  } catch (e) {
+    console.error({req, e});
+    const error = { s: "error" };
+    res.status(500).send(error);
+  }
+});
+
+app.get('/trades/address/:marketPk', async (req,res) => {
+  try {
+    const conn = await pool.getTedis();
+    try {
+      const marketPk = req.params.marketPk as string;
+      const marketName = symbolsByPk[marketPk];
+      const store = new RedisStore(conn, marketName);
+      const trades = await store.loadRecentTrades();
+      const response = { success: true, data: trades.map(t => { return { market: marketName, marketAddress: marketPk,
+          price: t.price, size: t.size, side: t.side == TradeSide.Buy ? "buy" : "sell", time: t.ts, orderId: "", feeCost:0 };}) };
+      res.send(response);
+      return;
+    } finally {
+      pool.putTedis(conn);
+    }
+  } catch (e) {
+    console.error({req, e});
+    const error = { s: "error" };
+    res.status(500).send(error);
+  }
+});
+
+const httpPort = parseInt(process.env.PORT || '5000');
+app.listen(httpPort);
 

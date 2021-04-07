@@ -168,6 +168,7 @@ const marketsV3: Record<string, string> = {
 const nativeMarketsV3: Record<string, string> = {
   "BTC/USDT": "C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4",
   "ETH/USDT": "7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF",
+  "MCAPS/USDC": "GgzXqy6agt7nnfoPjAEAFpWqnUwLBK5r2acaAQqXiEM8",
 };
 
 const symbolsByPk = Object.assign({}, ...Object.entries(marketsV2).map(([a,b]) => ({ [b]: a })),

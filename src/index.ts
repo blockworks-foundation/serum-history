@@ -208,7 +208,13 @@ const pool = new TedisPool(redisConfig);
 const HOURS = 60 * MINUTES;
 const resolutions: {[id: string]: number | undefined} = {
   "1": 1 * MINUTES,
+  "3": 3 * MINUTES,
+  "5": 5 * MINUTES,
+  "15": 15 * MINUTES,
+  "30": 30 * MINUTES,
   "60": 1 * HOURS,
+  "120": 2 * HOURS,
+  "180": 3 * HOURS,
   "240": 4 * HOURS,
   "1D": 24 * HOURS
 };

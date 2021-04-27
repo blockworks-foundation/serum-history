@@ -144,25 +144,18 @@ if (redisUrl.password !== '') {
 
 const network = "mainnet-beta"
 const clusterUrl = "https://solana-api.projectserum.com";
-const programIdV2 = "EUqojwWA2rd19FZrzeBncJsm38Jm1hEhE3zsmX3bRc2o";
 const programIdV3 = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin";
-const marketsV2: Record<string, string> = {
-  "BTC/USDC": "CVfYa8RGXnuDBeGmniCcdkBwoLqVxh92xB1JqgRQx3F",
-  "BTC/USDT": "EXnGBBSamqzd3uxEdRLUiYzjJkTwQyorAaFXdfteuGXe",
-  "ETH/USDC": "H5uzEytiByuXt964KampmuNCurNDwkVVypkym75J2DQW",
-  "ETH/USDT": "5abZGhrELnUnfM9ZUnvK6XJPoBU5eShZwfFPkdhAC7o",
-  "RAY/USDC": "Bgz8EEMBjejAGSn6FdtKJkSGtvg4cuJUuRwaCBp28S3U",
-  "RAY/USDT": "HZyhLoyAnfQ72irTdqPdWo2oFL9zzXaBmAqN72iF3sdX",
-  "SOL/USDC": "7xMDbYTCqQEcK2aM9LbetGtNFJpzKdfXzLL5juaLh4GJ",
-  "SOL/USDT": "7xLk17EQQ5KLDLDe44wCmupJKJjTGd8hs3eSVVhCx932",
-  "SRM/USDC": "CDdR97S8y96v3To93aKvi3nCnjUrbuVSuumw8FLvbVeg",
-  "SRM/USDT": "H3APNWA8bZW2gLMSq5sRL41JSMmEJ648AqoEdDgLcdvB",
-  "USDT/USDC": "8EuuEwULFM7n7zthPjC7kA64LPRzYkpAyuLFiLuVg7D4",
-};
 
 const marketsV3: Record<string, string> = {
+  "BTC/USDC": "A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw",
   "BTC/USDT": "5r8FfnbNYcQbS1m4CYmoHYGjBtu6bxfo6UJHNRfzPiYH",
+  "ETH/USDC": "4tSvZvnbyzHXLMTiFonMyxZoHmFqau1XArcRCVHLZ5gX",
   "ETH/USDT": "71CtEComq2XdhGNbXBuYPmosAjMCPSedcgbNi5jDaGbR",
+  "SOL/USDC": "9wFFyRfZBsuAha4YcuxcXLKwMxJR43S7fPfQLusDBzvT",
+  "SOL/USDT": "HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1",
+  "SRM/USDC": "ByRys5tuUWDgL73G8JBAEfkdFf8JWBzPBDHsBVQ5vbQA",
+  "SRM/USDT": "AtNnsY1AyRERWJ8xCskfz38YdvruWVJQUVXgScC1iPb",
+  "RAY/USDT": "teE55QrL4a4QSfydR9dnHF97jgCfptpuigbb53Lo95g",
 };
 
 const nativeMarketsV3: Record<string, string> = {
@@ -171,8 +164,7 @@ const nativeMarketsV3: Record<string, string> = {
   "MCAPS/USDC": "GgzXqy6agt7nnfoPjAEAFpWqnUwLBK5r2acaAQqXiEM8",
 };
 
-const symbolsByPk = Object.assign({}, ...Object.entries(marketsV2).map(([a,b]) => ({ [b]: a })),
-                                      ...Object.entries(marketsV3).map(([a,b]) => ({ [b]: a })),
+const symbolsByPk = Object.assign({}, ...Object.entries(marketsV3).map(([a,b]) => ({ [b]: a })),
                                       ...Object.entries(nativeMarketsV3).map(([a,b]) => ({ [b]: a })));
 
 function collectMarketData(programId: string, markets: Record<string, string>) {
@@ -184,7 +176,6 @@ function collectMarketData(programId: string, markets: Record<string, string>) {
   });
 };
 
-collectMarketData(programIdV2, marketsV2);
 collectMarketData(programIdV3, marketsV3);
 collectMarketData(programIdV3, nativeMarketsV3);
 
@@ -236,7 +227,7 @@ app.get('/tv/symbols', async (req, res) => {
 app.get('/tv/history', async (req,res) => {
   // parse
   const marketName = req.query.symbol as string;
-  const marketPk = nativeMarketsV3[marketName] || marketsV3[marketName] || marketsV2[marketName];
+  const marketPk = nativeMarketsV3[marketName] || marketsV3[marketName]
   const resolution = resolutions[req.query.resolution as string] as number;
   let from = parseInt(req.query.from as string) * 1000;
   let to = parseInt(req.query.to as string) * 1000;

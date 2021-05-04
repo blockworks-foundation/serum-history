@@ -139,7 +139,7 @@ if (redisUrl.password !== "") {
 }
 
 const network = "mainnet-beta"
-const clusterUrl = "https://solana-api.projectserum.com"
+const clusterUrl = process.env.RPC_ENDPOINT_URL || "https://solana-api.projectserum.com"
 const programIdV3 = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
 
 const marketsV3: Record<string, string> = {

@@ -191,7 +191,8 @@ interface TradingViewHistory {
 const app = express()
 app.use(cors())
 
-const redisConfig = { host, port, password, db: 0, max_conn: 200 }
+const max_conn = parseInt(process.env.REDIS_MAX_CONN || "") || 200;
+const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
 
 const HOURS = 60 * MINUTES

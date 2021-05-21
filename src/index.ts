@@ -142,27 +142,22 @@ const network = "mainnet-beta"
 const clusterUrl = process.env.RPC_ENDPOINT_URL || "https://solana-api.projectserum.com"
 const programIdV3 = "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
 
-const marketsV3: Record<string, string> = {
-  "BTC/USDT": "5r8FfnbNYcQbS1m4CYmoHYGjBtu6bxfo6UJHNRfzPiYH",
-  "ETH/USDT": "71CtEComq2XdhGNbXBuYPmosAjMCPSedcgbNi5jDaGbR",
-}
-
 const nativeMarketsV3: Record<string, string> = {
   "BTC/USDT": "C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4",
   "ETH/USDT": "7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF",
+  "SOL/USDT": "HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1",
+  "SRM/USDT": "AtNnsY1AyRERWJ8xCskfz38YdvruWVJQUVXgScC1iPb",
+  "RAY/USDT": "teE55QrL4a4QSfydR9dnHF97jgCfptpuigbb53Lo95g",
   "BTC/USDC": "A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw",
   "ETH/USDC": "4tSvZvnbyzHXLMTiFonMyxZoHmFqau1XArcRCVHLZ5gX",
   "SOL/USDC": "9wFFyRfZBsuAha4YcuxcXLKwMxJR43S7fPfQLusDBzvT",
-  "SOL/USDT": "HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1",
   "SRM/USDC": "ByRys5tuUWDgL73G8JBAEfkdFf8JWBzPBDHsBVQ5vbQA",
-  "SRM/USDT": "AtNnsY1AyRERWJ8xCskfz38YdvruWVJQUVXgScC1iPb",
-  "RAY/USDT": "teE55QrL4a4QSfydR9dnHF97jgCfptpuigbb53Lo95g",
+  "RAY/USDC": "2xiv8A5xrJ7RnGdxXB42uFEkYHJjszEhaJyKKt4WaLep",
   "MCAPS/USDC": "GgzXqy6agt7nnfoPjAEAFpWqnUwLBK5r2acaAQqXiEM8",
 }
 
 const symbolsByPk = Object.assign(
   {},
-  ...Object.entries(marketsV3).map(([a, b]) => ({ [b]: a })),
   ...Object.entries(nativeMarketsV3).map(([a, b]) => ({ [b]: a }))
 )
 
@@ -175,7 +170,6 @@ function collectMarketData(programId: string, markets: Record<string, string>) {
   })
 }
 
-collectMarketData(programIdV3, marketsV3)
 collectMarketData(programIdV3, nativeMarketsV3)
 
 interface TradingViewHistory {
@@ -242,7 +236,7 @@ app.get("/tv/symbols", async (req, res) => {
 app.get("/tv/history", async (req, res) => {
   // parse
   const marketName = req.query.symbol as string
-  const marketPk = nativeMarketsV3[marketName] || marketsV3[marketName]
+  const marketPk = nativeMarketsV3[marketName]
   const resolution = resolutions[req.query.resolution as string] as number
   let from = parseInt(req.query.from as string) * 1000
   let to = parseInt(req.query.to as string) * 1000

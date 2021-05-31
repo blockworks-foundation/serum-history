@@ -1,12 +1,11 @@
 import BN from 'bn.js';
 
-export interface Order {
-  orderId: BN;
-  price: number;
-  side: 'buy' | 'sell';
-  size: number;
-  eventFlags: { maker: boolean };
-};
+export interface MarketConfig {
+  clusterUrl: string
+  programId: string
+  marketName: string
+  marketPk: string
+}
 
 export enum TradeSide {
   None = 0,
@@ -15,7 +14,6 @@ export enum TradeSide {
 }
 
 export interface Trade {
-  id?: string;
   price: number;
   side: TradeSide;
   size: number;
@@ -46,5 +44,10 @@ export interface CandleStore {
 
 export interface BufferStore {
   storeBuffer: (ts: number, b: Buffer) => Promise<void>;
+};
+
+export interface KeyValStore {
+  storeNumber: (key: string, val: number) => Promise<void>;
+  loadNumber: (key: string) => Promise<number | undefined>;
 };
 

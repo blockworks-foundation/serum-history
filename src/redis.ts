@@ -2,7 +2,7 @@ import { Base64TradeCoder } from './base64';
 const coder = new Base64TradeCoder();
 
 import { batch } from './candle';
-import { BufferStore, Candle, CandleStore, Trade } from './interfaces';
+import { BufferStore, Candle, CandleStore, KeyValStore, Trade } from './interfaces';
 import { Tedis } from 'tedis';
 
 export interface RedisConfig {
@@ -12,7 +12,7 @@ export interface RedisConfig {
   password?: string;
 };
 
-export class RedisStore implements CandleStore, BufferStore {
+export class RedisStore implements CandleStore, BufferStore, KeyValStore {
   connection: Tedis;
   symbol: string;
 
@@ -91,6 +91,20 @@ export class RedisStore implements CandleStore, BufferStore {
   async storeBuffer(ts: number, b: Buffer): Promise<void> {
     const key = this.keyForBuffer(ts);
     await this.connection.set(key, b.toString('base64'));
+  };
+
+  // interface KeyValStore
+
+  async storeNumber(key: string, val: number): Promise<void> {
+    await this.connection.set(`${this.symbol}-NUM-${key}`, val.toString());
+  };
+
+  async loadNumber(key: string): Promise<number | undefined> {
+    const result = await this.connection.get(`${this.symbol}-NUM-${key}`);
+    if (result)
+      return result as number;
+    else
+      return undefined;
   };
 };
 

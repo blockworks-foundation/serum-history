@@ -59,7 +59,7 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
       const error = err.toString().split("\n", 1)[0]
       console.error(m.marketName, { error })
     }
-    await sleep({Seconds: 10})
+    await sleep({Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10})
   }
 }
 

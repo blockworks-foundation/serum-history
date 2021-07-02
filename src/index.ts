@@ -10,6 +10,7 @@ import { RedisConfig, RedisStore, createRedisStore } from './redis'
 import { resolutions, sleep } from './time'
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
+  const store = await createRedisStore(r, m.marketName)
   const marketAddress = new PublicKey(m.marketPk)
   const programKey = new PublicKey(m.programId)
   const connection = new Connection(m.clusterUrl)
@@ -51,7 +52,7 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
     return [trades, header.seqNum]
   }
 
-  async function storeTrades(store: RedisStore, ts: Trade[]) {
+  async function storeTrades(ts: Trade[]) {
     if (ts.length > 0) {
       console.log(m.marketName, ts.length)
       for (let i = 0; i < ts.length; i += 1) {
@@ -62,13 +63,13 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
 
   while (true) {
     try {
-      const store = await createRedisStore(r, m.marketName)
       const lastSeqNum = await store.loadNumber('LASTSEQ')
       const [trades, currentSeqNum] = await fetchTrades(lastSeqNum)
-      storeTrades(store, trades)
+      storeTrades(trades)
       store.storeNumber('LASTSEQ', currentSeqNum)
     } catch (err) {
-      console.error(m.marketName, err.toString())
+      const error = err.toString().split('\n', 1)[0]
+      console.error(m.marketName, { error })
     }
     await sleep({
       Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10,

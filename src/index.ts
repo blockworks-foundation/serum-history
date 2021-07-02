@@ -129,6 +129,9 @@ const pool = new TedisPool(redisConfig)
 
 const app = express()
 app.use(cors())
+app.use(function (req, res, next) {
+  res.set('Cache-control', 'no-store')
+})
 
 app.get('/tv/config', async (req, res) => {
   const response = {

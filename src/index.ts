@@ -129,9 +129,6 @@ const pool = new TedisPool(redisConfig)
 
 const app = express()
 app.use(cors())
-app.use(function (req, res, next) {
-  res.set('Cache-control', 'no-store')
-})
 
 app.get('/tv/config', async (req, res) => {
   const response = {
@@ -141,6 +138,7 @@ app.get('/tv/config', async (req, res) => {
     supports_search: true,
     supports_timescale_marks: false,
   }
+  res.set('Cache-control', 'public, max-age=360')
   res.send(response)
 })
 
@@ -160,6 +158,7 @@ app.get('/tv/symbols', async (req, res) => {
     minmov: 1,
     pricescale: 100,
   }
+  res.set('Cache-control', 'public, max-age=360')
   res.send(response)
 })
 
@@ -206,6 +205,7 @@ app.get('/tv/history', async (req, res) => {
         l: candles.map((c) => c.low),
         v: candles.map((c) => c.volume),
       }
+      res.set('Cache-control', 'public, max-age=1')
       res.send(response)
       return
     } finally {
@@ -253,6 +253,7 @@ app.get('/trades/address/:marketPk', async (req, res) => {
           }
         }),
       }
+      res.set('Cache-control', 'public, max-age=5')
       res.send(response)
       return
     } finally {

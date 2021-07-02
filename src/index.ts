@@ -68,8 +68,7 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
       storeTrades(trades)
       store.storeNumber('LASTSEQ', currentSeqNum)
     } catch (err) {
-      const error = err.toString().split('\n', 1)[0]
-      console.error(m.marketName, { error })
+      console.error(m.marketName, err.toString())
     }
     await sleep({
       Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10,

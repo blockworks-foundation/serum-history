@@ -51,8 +51,9 @@ const tradesRepository = sequelize.define('trades', {
 
 async function bulkLoad() {
     const nowEpochSeconds = Math.floor(Date.now().valueOf() / 1000);
-    const oneMonthAgoEpochSeconds = nowEpochSeconds - 60 * 60 * 24 * 30;
-    for (let epoch = oneMonthAgoEpochSeconds; epoch < (nowEpochSeconds + 60 * 60 * 24); epoch = epoch + 60 * 60 * 24) {
+    const oneDaySeconds = 60 * 60 * 24;
+    const nowMinusOneMonthAgoEpochSeconds = nowEpochSeconds - oneDaySeconds * 30;
+    for (let epoch = nowMinusOneMonthAgoEpochSeconds; epoch < (nowEpochSeconds + oneDaySeconds); epoch = epoch + 60 * 60 * 24) {
         let dateToLog = new Date(0);
         dateToLog.setUTCSeconds(epoch);
         console.log(`bulk loading for all markets for ${dateToLog.toDateString()}`)

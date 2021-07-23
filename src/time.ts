@@ -32,5 +32,9 @@ export function sleep(time: Timespan) {
   return new Promise((resolve) => setTimeout(resolve, total))
 }
 
+const minutesInTwoMonths = 1 * 60 * 24 * 60;
+export const maxCandles = minutesInTwoMonths;
+
+
 
 

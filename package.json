@@ -25,6 +25,10 @@
     "@solana/web3.js": "^0.91.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "pg": "^8.6.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.6.5",
+    "sequelize-cli": "^6.2.0",
     "tedis": "^0.1.12"
   },
   "scripts": {

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS serum_history.trades
     price     REAL,
     size      REAL,
     side      SIDE,
-    -- will store data in UTC, using timestamp since its more human readable than
+    -- will store date in UTC, using timestamp since its more human readable than
     -- e.g. unix timestamp
     timestamp timestamptz
 );

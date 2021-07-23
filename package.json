@@ -34,6 +34,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --files src/index.ts",
+    "timescale-perf-test-bulk-load": "ts-node-dev --files src/timescale-perf-test-bulk-load.ts",
     "clean": "rm -rf dist",
     "prepare": "run-s clean postinstall",
     "postinstall": "tsc",

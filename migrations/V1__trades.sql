@@ -7,7 +7,7 @@ CREATE TYPE SIDE AS ENUM('None', 'Buy', 'Sell');
 
 CREATE SCHEMA serum_history;
 
--- postgres and corresponding timescale table
+-- postgres and corresponding timescale table and compression policy
 CREATE TABLE IF NOT EXISTS serum_history.trades
 (
     id        SERIAL,
@@ -22,3 +22,11 @@ CREATE TABLE IF NOT EXISTS serum_history.trades
 );
 -- see https://docs.timescale.com/api/latest/hypertable/create_hypertable/
 SELECT create_hypertable('serum_history.trades', 'timestamp');
+
+ALTER TABLE serum_history.trades
+    SET (timescaledb.compress,
+     timescaledb.compress_segmentby = 'symbol');
+
+SELECT remove_compression_policy('serum_history.trades', if_exists=> TRUE);
+
+SELECT add_compression_policy('serum_history.trades', INTERVAL '1 day');

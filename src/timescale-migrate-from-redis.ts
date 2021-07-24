@@ -71,13 +71,16 @@ async function bulkMigrate() {
     const conn = await pool.getTedis()
     const keys = await conn.keys("*");
 
+    console.log(`Found ${keys.length} keys`)
+
+    let counter=0;
     for (const key of keys) {
         if (!key.match('[A-Z]+\\/[A-Z]+-([\\d]{4})-([\\d]{1,2})-([\\d]{1,2})')) {
-            console.log(`skipping ${key}`)
+            console.log(`${counter++}/${keys.length} skipping ${key}`)
             continue
         }
 
-        console.log(`copying ${key}`)
+        console.log(`${counter++}/${keys.length} copying ${key}`)
         const batch = []
         const tradesForDayForMarket = await conn.lrange(key, 0, -1);
         var trades = tradesForDayForMarket.flat().map(t => coder.decode(t));

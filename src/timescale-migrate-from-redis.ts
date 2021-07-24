@@ -14,7 +14,10 @@ const sequelize = new Sequelize(process.env.TIMESCALE_URL || 'postgres://postgre
     })
 sequelize.authenticate().then(() => {
     console.log('Connection to timescale has been established successfully.');
-    bulkMigrate();
+    bulkMigrate().then(_ => {
+        console.log("Finished successfully.")
+        process.exit()
+    });
 }).catch((err: any) => {
     console.error('Unable to connect to the timescale database:', err);
 })
@@ -73,7 +76,7 @@ async function bulkMigrate() {
 
     console.log(`Found ${keys.length} keys`)
 
-    let counter=0;
+    let counter = 0;
     for (const key of keys) {
         if (!key.match('[A-Z]+\\/[A-Z]+-([\\d]{4})-([\\d]{1,2})-([\\d]{1,2})')) {
             console.log(`${counter++}/${keys.length} skipping ${key}`)

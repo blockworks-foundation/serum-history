@@ -14,7 +14,7 @@ import {TimescaleEventsStore} from "./timescale-events";
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
   const store = await createRedisStore(r, m.marketName)
-  const tsStore = await new TimescaleStore(sequelize, m.marketName)
+  // const tsStore = await new TimescaleStore(sequelize, m.marketName)
   const marketAddress = new PublicKey(m.marketPk)
   const programKey = new PublicKey(m.programId)
   const connection = new Connection(m.clusterUrl)
@@ -64,9 +64,9 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
         var t1 = performance.now()
         // console.log("Call to redis:storeTrades took " + (t1 - t0) + " milliseconds.")
 
-        var t0 = performance.now()
-        await tsStore.storeTrade(ts[i])
-        var t1 = performance.now()
+        // var t0 = performance.now()
+        // await tsStore.storeTrade(ts[i])
+        // var t1 = performance.now()
         // console.log("Call to timescale:storeTrades took " + (t1 - t0) + " milliseconds.")
       }
     }
@@ -139,24 +139,25 @@ const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
 
 const Sequelize = require('sequelize')
-const sequelize = new Sequelize(process.env.TIMESCALE_URL || 'postgres://postgres:password@localhost:5432/postgres',
-    {
-      dialect: 'postgres',
-      logging: false,
-      protocol: 'postgres',
-      dialectOptions: {
-        // todo: decide if we want this or not
-        // ssl: {
-        //   require: true,
-        //   rejectUnauthorized: false
-        // }
-      }
-    })
-sequelize.authenticate().then(() => {
-  console.log('Connection to timescale has been established successfully.');
-}).catch((err: any) => {
-  console.error('Unable to connect to the timescale database:', err);
-})
+
+// const sequelize = new Sequelize(process.env.TIMESCALE_URL || 'postgres://postgres:password@localhost:5432/postgres',
+//     {
+//       dialect: 'postgres',
+//       logging: false,
+//       protocol: 'postgres',
+//       dialectOptions: {
+//         // todo: decide if we want this or not
+//         // ssl: {
+//         //   require: true,
+//         //   rejectUnauthorized: false
+//         // }
+//       }
+//     })
+// sequelize.authenticate().then(() => {
+//   console.log('Connection to timescale has been established successfully.');
+// }).catch((err: any) => {
+//   console.error('Unable to connect to the timescale database:', err);
+// })
 
 const sequelizeCloud = new Sequelize(process.env.TIMESCALE_CLOUD_URL,
     {
@@ -259,12 +260,13 @@ app.get('/tv/history', async (req, res) => {
       var t1 = performance.now()
       console.log("Call to redis:loadCandles took " + (t1 - t0) + " milliseconds.")
 
-      var t0 = performance.now()
-      const tsStore = new TimescaleStore(sequelize, marketName)
-      const throwAwayCandles2 = await tsStore.loadCandles(resolution, from, to);
-      var t1 = performance.now()
-      console.log("Call to serum-history:timescaleStore:loadCandles took " + (t1 - t0) + " milliseconds.")
+      // var t0 = performance.now()
+      // const tsStore = new TimescaleStore(sequelize, marketName)
+      // const throwAwayCandles2 = await tsStore.loadCandles(resolution, from, to);
+      // var t1 = performance.now()
+      // console.log("Call to serum-history:timescaleStore:loadCandles took " + (t1 - t0) + " milliseconds.")
 
+      // TODO: cache this, don't fetch everytime
       const marketAddress = new PublicKey('C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4')
       const programKey = new PublicKey(programIdV3)
       const connection = new Connection(clusterUrl)
@@ -330,11 +332,13 @@ app.get('/trades/address/:marketPk', async (req, res) => {
       var t1 = performance.now()
       console.log("Call to redis:loadRecentTrades took " + (t1 - t0) + " milliseconds.")
 
-      var t0 = performance.now()
-      const tsStore = new TimescaleStore(sequelize, marketName)
-      const trades = await tsStore.loadRecentTrades()
-      var t1 = performance.now()
-      console.log("Call to timescale:loadRecentTrades took " + (t1 - t0) + " milliseconds.")
+      // var t0 = performance.now()
+      // const tsStore = new TimescaleStore(sequelize, marketName)
+      // const trades = await tsStore.loadRecentTrades()
+      // var t1 = performance.now()
+      // console.log("Call to timescale:loadRecentTrades took " + (t1 - t0) + " milliseconds.")
+
+      const trades = throwAwayTrades;
 
       const response = {
         success: true,

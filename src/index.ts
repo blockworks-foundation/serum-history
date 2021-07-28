@@ -10,6 +10,7 @@ import {createRedisStore, RedisConfig, RedisStore} from './redis'
 import {maxCandles, resolutions, sleep} from './time'
 import {TimescaleStore} from "./timescale";
 import {performance} from "perf_hooks";
+import {TimescaleEventsStore} from "./timescale-events";
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
   const store = await createRedisStore(r, m.marketName)
@@ -57,7 +58,6 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
 
   async function storeTrades(ts: Trade[]) {
     if (ts.length > 0) {
-      console.log(m.marketName, ts.length)
       for (let i = 0; i < ts.length; i += 1) {
         var t0 = performance.now()
         await store.storeTrade(ts[i])
@@ -158,6 +158,24 @@ sequelize.authenticate().then(() => {
   console.error('Unable to connect to the timescale database:', err);
 })
 
+const sequelizeCloud = new Sequelize(process.env.TIMESCALE_CLOUD_URL,
+    {
+      dialect: 'postgres',
+      logging: false,
+      protocol: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      }
+    })
+sequelizeCloud.authenticate().then(() => {
+  console.log('Connection to timescale has been established successfully.');
+}).catch((err: any) => {
+  console.error('Unable to connect to the timescale database:', err);
+})
+
 const app = express()
 app.use(cors())
 
@@ -201,6 +219,13 @@ app.get('/tv/history', async (req, res) => {
   let from = parseInt(req.query.from as string) * 1000
   let to = parseInt(req.query.to as string) * 1000
 
+  const fromDate = new Date(0)
+  fromDate.setUTCMilliseconds(from)
+  const toDate = new Date(0)
+  toDate.setUTCMilliseconds(to)
+  console.log("")
+  console.log(`${req.query.symbol} - res: ${req.query.resolution}, from: ${fromDate.toUTCString()} , to: ${toDate.toUTCString()}`)
+
   // validate
   const validSymbol = marketPk != undefined
   const validResolution = resolution != undefined
@@ -236,9 +261,28 @@ app.get('/tv/history', async (req, res) => {
 
       var t0 = performance.now()
       const tsStore = new TimescaleStore(sequelize, marketName)
-      const candles = await tsStore.loadCandles(resolution, from, to);
+      const throwAwayCandles2 = await tsStore.loadCandles(resolution, from, to);
       var t1 = performance.now()
-      console.log("Call to timescale:loadCandles took " + (t1 - t0) + " milliseconds.")
+      console.log("Call to serum-history:timescaleStore:loadCandles took " + (t1 - t0) + " milliseconds.")
+
+      const marketAddress = new PublicKey('C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4')
+      const programKey = new PublicKey(programIdV3)
+      const connection = new Connection(clusterUrl)
+      const market = await Market.load(
+          connection,
+          marketAddress,
+          undefined,
+          programKey
+      )
+      var t1 = performance.now()
+
+      var t0 = performance.now()
+      const tsEventsStore = new TimescaleEventsStore(sequelizeCloud, marketName, market)
+      const candles = await tsEventsStore.loadCandles(resolution, from, to);
+      var t1 = performance.now()
+      console.log("Call to trade-history:timescaleEventsStore:loadCandles took " + (t1 - t0) + " milliseconds.")
+
+
 
       const response = {
         s: 'ok',

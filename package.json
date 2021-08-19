@@ -25,11 +25,17 @@
     "@solana/web3.js": "^0.91.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "pg": "^8.6.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.6.5",
+    "sequelize-cli": "^6.2.0",
     "tedis": "^0.1.12"
   },
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node-dev --files src/index.ts",
+    "timescale-perf-test-bulk-load": "ts-node-dev --files src/timescale-perf-test-bulk-load.ts",
+    "timescale-migrate-from-redis": "ts-node-dev --files src/timescale-migrate-from-redis.ts",
     "clean": "rm -rf dist",
     "prepare": "run-s clean postinstall",
     "postinstall": "tsc",

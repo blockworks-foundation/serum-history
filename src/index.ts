@@ -1,16 +1,20 @@
-import { Account, Connection, PublicKey } from '@solana/web3.js'
-import { Market } from '@project-serum/serum'
+import {Connection, PublicKey} from '@solana/web3.js'
+import {Market} from '@project-serum/serum'
 import cors from 'cors'
 import express from 'express'
-import { Tedis, TedisPool } from 'tedis'
-import { URL } from 'url'
-import { decodeRecentEvents } from './events'
-import { MarketConfig, Trade, TradeSide } from './interfaces'
-import { RedisConfig, RedisStore, createRedisStore } from './redis'
-import { resolutions, sleep } from './time'
+import {TedisPool} from 'tedis'
+import {URL} from 'url'
+import {decodeRecentEvents} from './events'
+import {MarketConfig, Trade, TradeSide} from './interfaces'
+import {createRedisStore, RedisConfig, RedisStore} from './redis'
+import {maxCandles, resolutions, sleep} from './time'
+import {TimescaleStore} from "./timescale";
+import {performance} from "perf_hooks";
+import {TimescaleEventsStore} from "./timescale-events";
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
   const store = await createRedisStore(r, m.marketName)
+  // const tsStore = await new TimescaleStore(sequelize, m.marketName)
   const marketAddress = new PublicKey(m.marketPk)
   const programKey = new PublicKey(m.programId)
   const connection = new Connection(m.clusterUrl)
@@ -54,9 +58,16 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
 
   async function storeTrades(ts: Trade[]) {
     if (ts.length > 0) {
-      console.log(m.marketName, ts.length)
       for (let i = 0; i < ts.length; i += 1) {
+        var t0 = performance.now()
         await store.storeTrade(ts[i])
+        var t1 = performance.now()
+        // console.log("Call to redis:storeTrades took " + (t1 - t0) + " milliseconds.")
+
+        // var t0 = performance.now()
+        // await tsStore.storeTrade(ts[i])
+        // var t1 = performance.now()
+        // console.log("Call to timescale:storeTrades took " + (t1 - t0) + " milliseconds.")
       }
     }
   }
@@ -146,6 +157,45 @@ const max_conn = parseInt(process.env.REDIS_MAX_CONN || '') || 200
 const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
 
+const Sequelize = require('sequelize')
+
+// const sequelize = new Sequelize(process.env.TIMESCALE_URL || 'postgres://postgres:password@localhost:5432/postgres',
+//     {
+//       dialect: 'postgres',
+//       logging: false,
+//       protocol: 'postgres',
+//       dialectOptions: {
+//         // todo: decide if we want this or not
+//         // ssl: {
+//         //   require: true,
+//         //   rejectUnauthorized: false
+//         // }
+//       }
+//     })
+// sequelize.authenticate().then(() => {
+//   console.log('Connection to timescale has been established successfully.');
+// }).catch((err: any) => {
+//   console.error('Unable to connect to the timescale database:', err);
+// })
+
+const sequelizeCloud = new Sequelize(process.env.TIMESCALE_CLOUD_URL,
+    {
+      dialect: 'postgres',
+      logging: false,
+      protocol: 'postgres',
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      }
+    })
+sequelizeCloud.authenticate().then(() => {
+  console.log('Connection to timescale has been established successfully.');
+}).catch((err: any) => {
+  console.error('Unable to connect to the timescale database:', err);
+})
+
 const app = express()
 app.use(cors())
 
@@ -189,14 +239,23 @@ app.get('/tv/history', async (req, res) => {
   let from = parseInt(req.query.from as string) * 1000
   let to = parseInt(req.query.to as string) * 1000
 
+  const fromDate = new Date(0)
+  fromDate.setUTCMilliseconds(from)
+  const toDate = new Date(0)
+  toDate.setUTCMilliseconds(to)
+  console.log("")
+  console.log(`${req.query.symbol} - res: ${req.query.resolution}, from: ${fromDate.toUTCString()} , to: ${toDate.toUTCString()}`)
+
   // validate
   const validSymbol = marketPk != undefined
   const validResolution = resolution != undefined
   const validFrom = true || new Date(from).getFullYear() >= 2021
-  if (!(validSymbol && validResolution && validFrom)) {
-    const error = { s: 'error', validSymbol, validResolution, validFrom }
+  const candlesToCompute = (to - from) / resolution;
+  const validRange = candlesToCompute < maxCandles;
+  if (!(validSymbol && validResolution && validFrom && validRange)) {
+    const error = { s: 'error', validSymbol, validResolution, validFrom, validRange }
     console.error({ marketName, error })
-    res.status(404).send(error)
+    res.status(400).send(error)
     return
   }
 
@@ -204,7 +263,6 @@ app.get('/tv/history', async (req, res) => {
   try {
     const conn = await pool.getTedis()
     try {
-      const store = new RedisStore(conn, marketName)
 
       // snap candle boundaries to exact hours
       from = Math.floor(from / resolution) * resolution
@@ -214,7 +272,39 @@ app.get('/tv/history', async (req, res) => {
       if (from == to) {
         to += resolution
       }
-      const candles = await store.loadCandles(resolution, from, to)
+
+      var t0 = performance.now()
+      const store = new RedisStore(conn, marketName)
+      const throwAwayCandles = await store.loadCandles(resolution, from, to)
+      var t1 = performance.now()
+      console.log("Call to redis:loadCandles took " + (t1 - t0) + " milliseconds.")
+
+      // var t0 = performance.now()
+      // const tsStore = new TimescaleStore(sequelize, marketName)
+      // const throwAwayCandles2 = await tsStore.loadCandles(resolution, from, to);
+      // var t1 = performance.now()
+      // console.log("Call to serum-history:timescaleStore:loadCandles took " + (t1 - t0) + " milliseconds.")
+
+      // TODO: cache this, don't fetch everytime
+      const marketAddress = new PublicKey('C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4')
+      const programKey = new PublicKey(programIdV3)
+      const connection = new Connection(clusterUrl)
+      const market = await Market.load(
+          connection,
+          marketAddress,
+          undefined,
+          programKey
+      )
+      var t1 = performance.now()
+
+      var t0 = performance.now()
+      const tsEventsStore = new TimescaleEventsStore(sequelizeCloud, marketName, market)
+      const candles = await tsEventsStore.loadCandles(resolution, from, to);
+      var t1 = performance.now()
+      console.log("Call to trade-history:timescaleEventsStore:loadCandles took " + (t1 - t0) + " milliseconds.")
+
+
+
       const response = {
         s: 'ok',
         t: candles.map((c) => c.start / 1000),
@@ -255,8 +345,20 @@ app.get('/trades/address/:marketPk', async (req, res) => {
   try {
     const conn = await pool.getTedis()
     try {
+      var t0 = performance.now()
       const store = new RedisStore(conn, marketName)
-      const trades = await store.loadRecentTrades()
+      const throwAwayTrades = await store.loadRecentTrades()
+      var t1 = performance.now()
+      console.log("Call to redis:loadRecentTrades took " + (t1 - t0) + " milliseconds.")
+
+      // var t0 = performance.now()
+      // const tsStore = new TimescaleStore(sequelize, marketName)
+      // const trades = await tsStore.loadRecentTrades()
+      // var t1 = performance.now()
+      // console.log("Call to timescale:loadRecentTrades took " + (t1 - t0) + " milliseconds.")
+
+      const trades = throwAwayTrades;
+
       const response = {
         success: true,
         data: trades.map((t) => {

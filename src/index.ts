@@ -322,6 +322,7 @@ app.get('/trades/address/:marketPk', async (req, res) => {
   const marketName =
     symbolsByPk[marketPk] ||
     groupConfig.perpMarkets.find((m) => m.publicKey.toBase58() === marketPk)
+      ?.name
 
   // validate
   const validPk = marketName != undefined

@@ -238,6 +238,26 @@ app.get('/tv/config', async (req, res) => {
   res.send(response)
 })
 
+const priceScales: any = {
+  'BTC/USDC': 1,
+  'BTC-PERP': 1,
+
+  'ETH/USDC': 10,
+  'ETH-PERP': 10,
+
+  'SOL/USDC': 1000,
+  'SOL-PERP': 1000,
+
+  'SRM/USDC': 1000,
+  'SRM-PERP': 1000,
+
+  'MNGO/USDC': 10000,
+  'MNGO-PERP': 10000,
+
+  'USDT/USDC': 10000,
+  'USDT-PERP': 10000,
+}
+
 app.get('/tv/symbols', async (req, res) => {
   const symbol = req.query.symbol as string
   const response = {
@@ -252,7 +272,7 @@ app.get('/tv/symbols', async (req, res) => {
     has_intraday: true,
     supported_resolutions: Object.keys(resolutions),
     minmov: 1,
-    pricescale: 100,
+    pricescale: priceScales[symbol] || 100,
   }
   res.set('Cache-control', 'public, max-age=360')
   res.send(response)

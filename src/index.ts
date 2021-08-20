@@ -184,7 +184,7 @@ async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
           price: e.price,
           side: e.takerSide === 'buy' ? TradeSide.Buy : TradeSide.Sell,
           size: e.quantity,
-          ts: e.timestamp,
+          ts: e.timestamp.toNumber() * 1000,
         }
       })
 

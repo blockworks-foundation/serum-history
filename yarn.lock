@@ -26,9 +26,9 @@
     regenerator-runtime "^0.13.4"
 
 "@blockworks-foundation/mango-client@^3.0.4":
-  version "3.0.5"
-  resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-3.0.5.tgz#392b692462cd4b35cd626002a318f69010dec6d1"
-  integrity sha512-Vr7jTeRODKYog8O2Q4ByVwcKemI2SUE0EtNF8mt/XVfvy4EKZTdz4jwmEWFpp0swrIdU0cYiQaDOwcs+UX5Igw==
+  version "3.0.10"
+  resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-3.0.10.tgz#707ae9b39c20deaf70c1e2af3f28f50e144d3697"
+  integrity sha512-MuDCzbpLXnghY4uXnbh+LKNnGUYOXXHDB+zt+MStARidhyb3NLdWRuUlEmM7E2FQtNH+QxM3L4539ibNJYL9wQ==
   dependencies:
     "@project-serum/serum" "0.13.55"
     "@project-serum/sol-wallet-adapter" "^0.2.0"
@@ -36,7 +36,7 @@
     "@solana/web3.js" "1.21.0"
     big.js "^6.1.1"
     bigint-buffer "^1.1.5"
-    bn.js "^5.1.2"
+    bn.js "^5.1.0"
     borsh "https://github.com/defactojob/borsh-js#field-mapper"
     buffer-layout "^1.2.1"
     yargs "^17.0.1"
@@ -283,14 +283,14 @@
   integrity sha512-YATxVxgRqNH6nHEIsvg6k2Boc1JHI9ZbH5iWFFv/MTkchz3b1ieGDa5T0a9RznNdI0KhVbdbWSN+KWWrQZRxTw==
 
 "@types/node@*":
-  version "16.6.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-16.6.2.tgz#331b7b9f8621c638284787c5559423822fdffc50"
-  integrity sha512-LSw8TZt12ZudbpHc6EkIyDM3nHVWKYrAvGy6EAJfNfjusbwnThqjqxUKKRwuV3iWYeW/LYMzNgaq3MaLffQ2xA==
+  version "16.7.1"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-16.7.1.tgz#c6b9198178da504dfca1fd0be9b2e1002f1586f0"
+  integrity sha512-ncRdc45SoYJ2H4eWU9ReDfp3vtFqDYhjOsKlFFUDEn8V1Bgr2RjYal8YT5byfadWIRluhPFU6JiDOl0H6Sl87A==
 
 "@types/node@^12.12.54":
-  version "12.20.19"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.19.tgz#538e61fc220f77ae4a4663c3d8c3cb391365c209"
-  integrity sha512-niAuZrwrjKck4+XhoCw6AAVQBENHftpXw9F4ryk66fTgYaKQ53R4FI7c9vUGGw5vQis1HKBHDR1gcYI/Bq1xvw==
+  version "12.20.20"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.20.tgz#ce3d6c13c15c5e622a85efcd3a1cb2d9c7fa43a6"
+  integrity sha512-kqmxiJg4AT7rsSPIhO6eoBIx9mNwwpeH42yjtgQh6X2ANSpLpvToMXv+LMFdfxpwG1FZXZ41OGZMiUAtbBLEvg==
 
 "@types/node@^14.14.28":
   version "14.14.28"

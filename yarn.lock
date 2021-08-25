@@ -25,10 +25,10 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@blockworks-foundation/mango-client@^3.0.4":
-  version "3.0.10"
-  resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-3.0.10.tgz#707ae9b39c20deaf70c1e2af3f28f50e144d3697"
-  integrity sha512-MuDCzbpLXnghY4uXnbh+LKNnGUYOXXHDB+zt+MStARidhyb3NLdWRuUlEmM7E2FQtNH+QxM3L4539ibNJYL9wQ==
+"@blockworks-foundation/mango-client@^3.0.11":
+  version "3.0.11"
+  resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-3.0.11.tgz#b27b3fad18dde15aa5ad3ea1edf5ea9a1951a831"
+  integrity sha512-FDn0Px0Tk9h1yQgFzus92nxfrtVlkLrynLW9UyMTPpnlCmCuWivYeEeIH+kCGyNUCI7RWzACAZI0xvHIpfVdNQ==
   dependencies:
     "@project-serum/serum" "0.13.55"
     "@project-serum/sol-wallet-adapter" "^0.2.0"

@@ -151,7 +151,7 @@ function collectMarketData(programId: string, markets: Record<string, string>) {
 
 collectMarketData(programIdV3, nativeMarketsV3)
 
-const groupConfig = Config.ids().getGroup('mainnet', 'mainnet.0') as GroupConfig
+const groupConfig = Config.ids().getGroup('mainnet', 'mainnet.1') as GroupConfig
 
 async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
   const connection = new Connection(

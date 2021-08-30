@@ -1,4 +1,4 @@
-import { Account, Connection, PublicKey } from '@solana/web3.js'
+import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js'
 import { Market } from '@project-serum/serum'
 import cors from 'cors'
 import express from 'express'
@@ -8,6 +8,15 @@ import { decodeRecentEvents } from './events'
 import { MarketConfig, Trade, TradeSide } from './interfaces'
 import { RedisConfig, RedisStore, createRedisStore } from './redis'
 import { resolutions, sleep } from './time'
+import {
+  Config,
+  getMarketByBaseSymbolAndKind,
+  GroupConfig,
+  MangoClient,
+  PerpMarketConfig,
+  FillEvent,
+} from '@blockworks-foundation/mango-client'
+import BN from 'bn.js'
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
   const store = await createRedisStore(r, m.marketName)
@@ -142,6 +151,74 @@ function collectMarketData(programId: string, markets: Record<string, string>) {
 
 collectMarketData(programIdV3, nativeMarketsV3)
 
+const groupConfig = Config.ids().getGroup('mainnet', 'mainnet.1') as GroupConfig
+
+async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
+  const connection = new Connection(
+    'https://mango.rpcpool.com',
+    'processed' as Commitment
+  )
+
+  const store = await createRedisStore(r, m.name)
+  const mangoClient = new MangoClient(connection, groupConfig!.mangoProgramId)
+  const mangoGroup = await mangoClient.getMangoGroup(groupConfig!.publicKey)
+  const perpMarket = await mangoGroup.loadPerpMarket(
+    connection,
+    m.marketIndex,
+    m.baseDecimals,
+    m.quoteDecimals
+  )
+
+  async function fetchTrades(lastSeqNum?: BN): Promise<[Trade[], BN]> {
+    const now = Date.now()
+
+    const eventQueue = await perpMarket.loadEventQueue(connection)
+    const events = eventQueue.eventsSince(lastSeqNum || new BN(0))
+
+    const trades = events
+      .map((e) => e.fill)
+      .filter((e) => !!e)
+      .map((e) => perpMarket.parseFillEvent(e))
+      .map((e) => {
+        return {
+          price: e.price,
+          side: e.takerSide === 'buy' ? TradeSide.Buy : TradeSide.Sell,
+          size: e.quantity,
+          ts: e.timestamp.toNumber() * 1000,
+        }
+      })
+
+    return [trades, eventQueue.seqNum as any]
+  }
+
+  async function storeTrades(ts: Trade[]) {
+    if (ts.length > 0) {
+      console.log(m.name, ts.length)
+      for (let i = 0; i < ts.length; i += 1) {
+        await store.storeTrade(ts[i])
+      }
+    }
+  }
+
+  while (true) {
+    try {
+      const lastSeqNum = await store.loadNumber('LASTSEQ')
+      const [trades, currentSeqNum] = await fetchTrades(new BN(lastSeqNum || 0))
+      storeTrades(trades)
+      store.storeNumber('LASTSEQ', currentSeqNum.toString() as any)
+    } catch (err) {
+      console.error(m.name, err.toString())
+    }
+    await sleep({
+      Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10,
+    })
+  }
+}
+
+groupConfig.perpMarkets.forEach((m) =>
+  collectPerpEventQueue({ host, port, password, db: 0 }, m)
+)
+
 const max_conn = parseInt(process.env.REDIS_MAX_CONN || '') || 200
 const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
@@ -161,6 +238,26 @@ app.get('/tv/config', async (req, res) => {
   res.send(response)
 })
 
+const priceScales: any = {
+  'BTC/USDC': 1,
+  'BTC-PERP': 1,
+
+  'ETH/USDC': 10,
+  'ETH-PERP': 10,
+
+  'SOL/USDC': 1000,
+  'SOL-PERP': 1000,
+
+  'SRM/USDC': 1000,
+  'SRM-PERP': 1000,
+
+  'MNGO/USDC': 10000,
+  'MNGO-PERP': 10000,
+
+  'USDT/USDC': 10000,
+  'USDT-PERP': 10000,
+}
+
 app.get('/tv/symbols', async (req, res) => {
   const symbol = req.query.symbol as string
   const response = {
@@ -175,7 +272,7 @@ app.get('/tv/symbols', async (req, res) => {
     has_intraday: true,
     supported_resolutions: Object.keys(resolutions),
     minmov: 1,
-    pricescale: 100,
+    pricescale: priceScales[symbol] || 100,
   }
   res.set('Cache-control', 'public, max-age=360')
   res.send(response)
@@ -184,13 +281,15 @@ app.get('/tv/symbols', async (req, res) => {
 app.get('/tv/history', async (req, res) => {
   // parse
   const marketName = req.query.symbol as string
-  const marketPk = nativeMarketsV3[marketName]
+  const market =
+    nativeMarketsV3[marketName] ||
+    groupConfig.perpMarkets.find((m) => m.name === marketName)
   const resolution = resolutions[req.query.resolution as string] as number
   let from = parseInt(req.query.from as string) * 1000
   let to = parseInt(req.query.to as string) * 1000
 
   // validate
-  const validSymbol = marketPk != undefined
+  const validSymbol = market != undefined
   const validResolution = resolution != undefined
   const validFrom = true || new Date(from).getFullYear() >= 2021
   if (!(validSymbol && validResolution && validFrom)) {
@@ -240,7 +339,10 @@ app.get('/tv/history', async (req, res) => {
 app.get('/trades/address/:marketPk', async (req, res) => {
   // parse
   const marketPk = req.params.marketPk as string
-  const marketName = symbolsByPk[marketPk]
+  const marketName =
+    symbolsByPk[marketPk] ||
+    groupConfig.perpMarkets.find((m) => m.publicKey.toBase58() === marketPk)
+      ?.name
 
   // validate
   const validPk = marketName != undefined

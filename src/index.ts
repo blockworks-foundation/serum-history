@@ -30,8 +30,9 @@ if (redisUrl.password !== '') {
 const network = 'mainnet-beta'
 const clusterUrl =
   process.env.RPC_ENDPOINT_URL || 'https://solana-api.projectserum.com'
+const fetchInterval = process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 30
 
-console.log({ clusterUrl })
+console.log({ clusterUrl, fetchInterval })
 
 const programIdV3 = '9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin'
 
@@ -125,19 +126,17 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
     }
   }
 
-  setInterval(
-    async () => {
-      try {
-        const lastSeqNum = await store.loadNumber('LASTSEQ')
-        const [trades, currentSeqNum] = await fetchTrades(lastSeqNum)
-        storeTrades(trades)
-        store.storeNumber('LASTSEQ', currentSeqNum)
-      } catch (err) {
-        notify(`collectEventQueue ${m.marketName} ${err.toString()}`)
-      }
-    },
-    process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 30
-  )
+  while (true) {
+    try {
+      const lastSeqNum = await store.loadNumber('LASTSEQ')
+      const [trades, currentSeqNum] = await fetchTrades(lastSeqNum)
+      storeTrades(trades)
+      store.storeNumber('LASTSEQ', currentSeqNum)
+    } catch (err) {
+      notify(`collectEventQueue ${m.marketName} ${err.toString()}`)
+    }
+    await sleep({ Seconds: fetchInterval })
+  }
 }
 
 function collectMarketData(programId: string, markets: Record<string, string>) {
@@ -206,21 +205,18 @@ async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
     }
   }
 
-  setInterval(
-    async () => {
-      try {
-        const lastSeqNum = await store.loadNumber('LASTSEQ')
-        const [trades, currentSeqNum] = await fetchTrades(
-          new BN(lastSeqNum || 0)
-        )
-        storeTrades(trades)
-        store.storeNumber('LASTSEQ', currentSeqNum.toString() as any)
-      } catch (err) {
-        notify(`collectPerpEventQueue ${m.name} ${err.toString()}`)
-      }
-    },
-    process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 30
-  )
+  while (true) {
+    try {
+      const lastSeqNum = await store.loadNumber('LASTSEQ')
+      const [trades, currentSeqNum] = await fetchTrades(new BN(lastSeqNum || 0))
+      storeTrades(trades)
+      store.storeNumber('LASTSEQ', currentSeqNum.toString() as any)
+    } catch (err) {
+      notify(`collectPerpEventQueue ${m.name} ${err.toString()}`)
+    }
+
+    await sleep({ Seconds: fetchInterval })
+  }
 }
 
 if (process.env.ROLE === 'web') {

@@ -363,7 +363,6 @@ app.get('/trades/address/:marketPk', async (req, res) => {
   const validPk = marketName != undefined
   if (!validPk) {
     const error = { s: 'error', validPk }
-    console.error({ marketPk, error })
     res.status(404).send(error)
     return
   }

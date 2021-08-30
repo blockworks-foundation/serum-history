@@ -163,10 +163,7 @@ collectMarketData(programIdV3, nativeMarketsV3)
 const groupConfig = Config.ids().getGroup('mainnet', 'mainnet.1') as GroupConfig
 
 async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
-  const connection = new Connection(
-    'https://mango.rpcpool.com',
-    'processed' as Commitment
-  )
+  const connection = new Connection(clusterUrl, 'processed' as Commitment)
 
   const store = await createRedisStore(r, m.name)
   const mangoClient = new MangoClient(connection, groupConfig!.mangoProgramId)
@@ -237,6 +234,7 @@ if (process.env.ROLE === 'web') {
 const max_conn = parseInt(process.env.REDIS_MAX_CONN || '') || 200
 const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
+console.log({ max_conn, host })
 
 const app = express()
 app.use(cors())

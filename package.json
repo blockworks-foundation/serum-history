@@ -24,6 +24,7 @@
     "@blockworks-foundation/mango-client": "^3.0.11",
     "@project-serum/serum": "^0.13.20",
     "@solana/web3.js": "^0.91.0",
+    "axios": "^0.21.1",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "tedis": "^0.1.12"

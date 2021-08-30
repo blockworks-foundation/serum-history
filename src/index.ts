@@ -17,6 +17,7 @@ import {
   FillEvent,
 } from '@blockworks-foundation/mango-client'
 import BN from 'bn.js'
+import notify from './notify'
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
   const store = await createRedisStore(r, m.marketName)
@@ -70,19 +71,19 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
     }
   }
 
-  while (true) {
-    try {
-      const lastSeqNum = await store.loadNumber('LASTSEQ')
-      const [trades, currentSeqNum] = await fetchTrades(lastSeqNum)
-      storeTrades(trades)
-      store.storeNumber('LASTSEQ', currentSeqNum)
-    } catch (err) {
-      console.error(m.marketName, err.toString())
-    }
-    await sleep({
-      Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10,
-    })
-  }
+  setInterval(
+    async () => {
+      try {
+        const lastSeqNum = await store.loadNumber('LASTSEQ')
+        const [trades, currentSeqNum] = await fetchTrades(lastSeqNum)
+        storeTrades(trades)
+        store.storeNumber('LASTSEQ', currentSeqNum)
+      } catch (err) {
+        notify(`collectEventQueue ${m.marketName} ${err.toString()}`)
+      }
+    },
+    process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 30
+  )
 }
 
 const redisUrl = new URL(process.env.REDISCLOUD_URL || 'redis://localhost:6379')
@@ -200,19 +201,21 @@ async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
     }
   }
 
-  while (true) {
-    try {
-      const lastSeqNum = await store.loadNumber('LASTSEQ')
-      const [trades, currentSeqNum] = await fetchTrades(new BN(lastSeqNum || 0))
-      storeTrades(trades)
-      store.storeNumber('LASTSEQ', currentSeqNum.toString() as any)
-    } catch (err) {
-      console.error(m.name, err.toString())
-    }
-    await sleep({
-      Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10,
-    })
-  }
+  setInterval(
+    async () => {
+      try {
+        const lastSeqNum = await store.loadNumber('LASTSEQ')
+        const [trades, currentSeqNum] = await fetchTrades(
+          new BN(lastSeqNum || 0)
+        )
+        storeTrades(trades)
+        store.storeNumber('LASTSEQ', currentSeqNum.toString() as any)
+      } catch (err) {
+        notify(`collectPerpEventQueue ${m.name} ${err.toString()}`)
+      }
+    },
+    process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 30
+  )
 }
 
 groupConfig.perpMarkets.forEach((m) =>
@@ -330,7 +333,7 @@ app.get('/tv/history', async (req, res) => {
       pool.putTedis(conn)
     }
   } catch (e) {
-    console.error({ req, e })
+    notify(`tv/history ${marketName} ${e.toString()}`)
     const error = { s: 'error' }
     res.status(500).send(error)
   }
@@ -381,7 +384,7 @@ app.get('/trades/address/:marketPk', async (req, res) => {
       pool.putTedis(conn)
     }
   } catch (e) {
-    console.error({ req, e })
+    notify(`trades ${marketName} ${e.toString()}`)
     const error = { s: 'error' }
     res.status(500).send(error)
   }

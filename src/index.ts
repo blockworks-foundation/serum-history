@@ -75,67 +75,76 @@ const symbolsByPk = Object.assign(
 )
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
-  const store = await createRedisStore(r, m.marketName)
-  const marketAddress = new PublicKey(m.marketPk)
-  const programKey = new PublicKey(m.programId)
-  const connection = new Connection(m.clusterUrl)
-  const market = await Market.load(
-    connection,
-    marketAddress,
-    undefined,
-    programKey
-  )
+  try {
+    const store = await createRedisStore(r, m.marketName)
+    const marketAddress = new PublicKey(m.marketPk)
+    const programKey = new PublicKey(m.programId)
+    const connection = new Connection(m.clusterUrl)
+    const market = await Market.load(
+      connection,
+      marketAddress,
+      undefined,
+      programKey
+    )
 
-  async function fetchTrades(lastSeqNum?: number): Promise<[Trade[], number]> {
-    const now = Date.now()
-    const accountInfo = await connection.getAccountInfo(
-      market['_decoded'].eventQueue
-    )
-    if (accountInfo === null) {
-      throw new Error(
-        `Event queue account for market ${m.marketName} not found`
+    async function fetchTrades(
+      lastSeqNum?: number
+    ): Promise<[Trade[], number]> {
+      const now = Date.now()
+      const accountInfo = await connection.getAccountInfo(
+        market['_decoded'].eventQueue
       )
-    }
-    const { header, events } = decodeRecentEvents(accountInfo.data, lastSeqNum)
-    const takerFills = events.filter(
-      (e) => e.eventFlags.fill && !e.eventFlags.maker
-    )
-    const trades = takerFills
-      .map((e) => market.parseFillEvent(e))
-      .map((e) => {
-        return {
-          price: e.price,
-          side: e.side === 'buy' ? TradeSide.Buy : TradeSide.Sell,
-          size: e.size,
-          ts: now,
-        }
-      })
-    /*
+      if (accountInfo === null) {
+        throw new Error(
+          `Event queue account for market ${m.marketName} not found`
+        )
+      }
+      const { header, events } = decodeRecentEvents(
+        accountInfo.data,
+        lastSeqNum
+      )
+      const takerFills = events.filter(
+        (e) => e.eventFlags.fill && !e.eventFlags.maker
+      )
+      const trades = takerFills
+        .map((e) => market.parseFillEvent(e))
+        .map((e) => {
+          return {
+            price: e.price,
+            side: e.side === 'buy' ? TradeSide.Buy : TradeSide.Sell,
+            size: e.size,
+            ts: now,
+          }
+        })
+      /*
     if (trades.length > 0)
       console.log({e: events.map(e => e.eventFlags), takerFills, trades})
     */
-    return [trades, header.seqNum]
-  }
+      return [trades, header.seqNum]
+    }
 
-  async function storeTrades(ts: Trade[]) {
-    if (ts.length > 0) {
-      console.log(m.marketName, ts.length)
-      for (let i = 0; i < ts.length; i += 1) {
-        await store.storeTrade(ts[i])
+    async function storeTrades(ts: Trade[]) {
+      if (ts.length > 0) {
+        console.log(m.marketName, ts.length)
+        for (let i = 0; i < ts.length; i += 1) {
+          await store.storeTrade(ts[i])
+        }
       }
     }
-  }
 
-  while (true) {
-    try {
-      const lastSeqNum = await store.loadNumber('LASTSEQ')
-      const [trades, currentSeqNum] = await fetchTrades(lastSeqNum)
-      storeTrades(trades)
-      store.storeNumber('LASTSEQ', currentSeqNum)
-    } catch (err) {
-      notify(`collectEventQueue ${m.marketName} ${err.toString()}`)
+    while (true) {
+      try {
+        const lastSeqNum = await store.loadNumber('LASTSEQ')
+        const [trades, currentSeqNum] = await fetchTrades(lastSeqNum)
+        storeTrades(trades)
+        store.storeNumber('LASTSEQ', currentSeqNum)
+      } catch (e) {
+        notify(`collectEventQueue ${m.marketName} ${e.toString()}`)
+      }
+      await sleep({ Seconds: fetchInterval })
     }
-    await sleep({ Seconds: fetchInterval })
+  } catch (e) {
+    notify(`collectEventQueue ${m.marketName} ${e.toString()}`)
   }
 }
 

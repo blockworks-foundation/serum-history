@@ -241,85 +241,84 @@ const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
 console.log({ max_conn, host })
 
-const app = express()
-app.use(cors())
+pool.getTedis().then((conn: any) => {
+  const app = express()
+  app.use(cors())
 
-app.get('/tv/config', async (req, res) => {
-  const response = {
-    supported_resolutions: Object.keys(resolutions),
-    supports_group_request: false,
-    supports_marks: false,
-    supports_search: true,
-    supports_timescale_marks: false,
-  }
-  res.set('Cache-control', 'public, max-age=360')
-  res.send(response)
-})
+  app.get('/tv/config', async (req, res) => {
+    const response = {
+      supported_resolutions: Object.keys(resolutions),
+      supports_group_request: false,
+      supports_marks: false,
+      supports_search: true,
+      supports_timescale_marks: false,
+    }
+    res.set('Cache-control', 'public, max-age=360')
+    res.send(response)
+  })
 
-const priceScales: any = {
-  'BTC/USDC': 1,
-  'BTC-PERP': 1,
+  const priceScales: any = {
+    'BTC/USDC': 1,
+    'BTC-PERP': 1,
 
-  'ETH/USDC': 10,
-  'ETH-PERP': 10,
+    'ETH/USDC': 10,
+    'ETH-PERP': 10,
 
-  'SOL/USDC': 1000,
-  'SOL-PERP': 1000,
+    'SOL/USDC': 1000,
+    'SOL-PERP': 1000,
 
-  'SRM/USDC': 1000,
-  'SRM-PERP': 1000,
+    'SRM/USDC': 1000,
+    'SRM-PERP': 1000,
 
-  'MNGO/USDC': 10000,
-  'MNGO-PERP': 10000,
+    'MNGO/USDC': 10000,
+    'MNGO-PERP': 10000,
 
-  'USDT/USDC': 10000,
-  'USDT-PERP': 10000,
-}
-
-app.get('/tv/symbols', async (req, res) => {
-  const symbol = req.query.symbol as string
-  const response = {
-    name: symbol,
-    ticker: symbol,
-    description: symbol,
-    type: 'Spot',
-    session: '24x7',
-    exchange: 'Mango',
-    listed_exchange: 'Mango',
-    timezone: 'Etc/UTC',
-    has_intraday: true,
-    supported_resolutions: Object.keys(resolutions),
-    minmov: 1,
-    pricescale: priceScales[symbol] || 100,
-  }
-  res.set('Cache-control', 'public, max-age=360')
-  res.send(response)
-})
-
-app.get('/tv/history', async (req, res) => {
-  // parse
-  const marketName = req.query.symbol as string
-  const market =
-    nativeMarketsV3[marketName] ||
-    groupConfig.perpMarkets.find((m) => m.name === marketName)
-  const resolution = resolutions[req.query.resolution as string] as number
-  let from = parseInt(req.query.from as string) * 1000
-  let to = parseInt(req.query.to as string) * 1000
-
-  // validate
-  const validSymbol = market != undefined
-  const validResolution = resolution != undefined
-  const validFrom = true || new Date(from).getFullYear() >= 2021
-  if (!(validSymbol && validResolution && validFrom)) {
-    const error = { s: 'error', validSymbol, validResolution, validFrom }
-    console.error({ marketName, error })
-    res.status(404).send(error)
-    return
+    'USDT/USDC': 10000,
+    'USDT-PERP': 10000,
   }
 
-  // respond
-  try {
-    const conn = await pool.getTedis()
+  app.get('/tv/symbols', async (req, res) => {
+    const symbol = req.query.symbol as string
+    const response = {
+      name: symbol,
+      ticker: symbol,
+      description: symbol,
+      type: 'Spot',
+      session: '24x7',
+      exchange: 'Mango',
+      listed_exchange: 'Mango',
+      timezone: 'Etc/UTC',
+      has_intraday: true,
+      supported_resolutions: Object.keys(resolutions),
+      minmov: 1,
+      pricescale: priceScales[symbol] || 100,
+    }
+    res.set('Cache-control', 'public, max-age=360')
+    res.send(response)
+  })
+
+  app.get('/tv/history', async (req, res) => {
+    // parse
+    const marketName = req.query.symbol as string
+    const market =
+      nativeMarketsV3[marketName] ||
+      groupConfig.perpMarkets.find((m) => m.name === marketName)
+    const resolution = resolutions[req.query.resolution as string] as number
+    let from = parseInt(req.query.from as string) * 1000
+    let to = parseInt(req.query.to as string) * 1000
+
+    // validate
+    const validSymbol = market != undefined
+    const validResolution = resolution != undefined
+    const validFrom = true || new Date(from).getFullYear() >= 2021
+    if (!(validSymbol && validResolution && validFrom)) {
+      const error = { s: 'error', validSymbol, validResolution, validFrom }
+      console.error({ marketName, error })
+      res.status(404).send(error)
+      return
+    }
+
+    // respond
     try {
       const store = new RedisStore(conn, marketName)
 
@@ -344,35 +343,30 @@ app.get('/tv/history', async (req, res) => {
       res.set('Cache-control', 'public, max-age=1')
       res.send(response)
       return
-    } finally {
-      pool.putTedis(conn)
+    } catch (e) {
+      notify(`tv/history ${marketName} ${e.toString()}`)
+      const error = { s: 'error' }
+      res.status(500).send(error)
     }
-  } catch (e) {
-    notify(`tv/history ${marketName} ${e.toString()}`)
-    const error = { s: 'error' }
-    res.status(500).send(error)
-  }
-})
+  })
 
-app.get('/trades/address/:marketPk', async (req, res) => {
-  // parse
-  const marketPk = req.params.marketPk as string
-  const marketName =
-    symbolsByPk[marketPk] ||
-    groupConfig.perpMarkets.find((m) => m.publicKey.toBase58() === marketPk)
-      ?.name
+  app.get('/trades/address/:marketPk', async (req, res) => {
+    // parse
+    const marketPk = req.params.marketPk as string
+    const marketName =
+      symbolsByPk[marketPk] ||
+      groupConfig.perpMarkets.find((m) => m.publicKey.toBase58() === marketPk)
+        ?.name
 
-  // validate
-  const validPk = marketName != undefined
-  if (!validPk) {
-    const error = { s: 'error', validPk }
-    res.status(404).send(error)
-    return
-  }
+    // validate
+    const validPk = marketName != undefined
+    if (!validPk) {
+      const error = { s: 'error', validPk }
+      res.status(404).send(error)
+      return
+    }
 
-  // respond
-  try {
-    const conn = await pool.getTedis()
+    // respond
     try {
       const store = new RedisStore(conn, marketName)
       const trades = await store.loadRecentTrades()
@@ -394,15 +388,13 @@ app.get('/trades/address/:marketPk', async (req, res) => {
       res.set('Cache-control', 'public, max-age=5')
       res.send(response)
       return
-    } finally {
-      pool.putTedis(conn)
+    } catch (e) {
+      notify(`trades ${marketName} ${e.toString()}`)
+      const error = { s: 'error' }
+      res.status(500).send(error)
     }
-  } catch (e) {
-    notify(`trades ${marketName} ${e.toString()}`)
-    const error = { s: 'error' }
-    res.status(500).send(error)
-  }
-})
+  })
 
-const httpPort = parseInt(process.env.PORT || '5000')
-app.listen(httpPort)
+  const httpPort = parseInt(process.env.PORT || '5000')
+  app.listen(httpPort)
+})

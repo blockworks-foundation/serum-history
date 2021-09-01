@@ -1,4 +1,4 @@
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js'
+import { Account, Connection, PublicKey } from '@solana/web3.js'
 import { Market } from '@project-serum/serum'
 import cors from 'cors'
 import express from 'express'
@@ -8,15 +8,6 @@ import { decodeRecentEvents } from './events'
 import { MarketConfig, Trade, TradeSide } from './interfaces'
 import { RedisConfig, RedisStore, createRedisStore } from './redis'
 import { resolutions, sleep } from './time'
-import {
-  Config,
-  getMarketByBaseSymbolAndKind,
-  GroupConfig,
-  MangoClient,
-  PerpMarketConfig,
-  FillEvent,
-} from '@blockworks-foundation/mango-client'
-import BN from 'bn.js'
 
 async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
   const store = await createRedisStore(r, m.marketName)
@@ -95,40 +86,63 @@ if (redisUrl.password !== '') {
 
 const network = 'mainnet-beta'
 const clusterUrl =
-  process.env.RPC_ENDPOINT_URL || 'https://solana-api.projectserum.com'
+  process.env.RPC_ENDPOINT_URL || 'https://api.mainnet-beta.solana.com'
 const programIdV3 = '9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin'
 
 const nativeMarketsV3: Record<string, string> = {
-  'BTC/USDT': 'C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4',
-  'ETH/USDT': '7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF',
-  'SOL/USDT': 'HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1',
-  'SRM/USDT': 'AtNnsY1AyRERWJ8xCskfz38YdvruWVJQUVXgScC1iPb',
-  'RAY/USDT': 'teE55QrL4a4QSfydR9dnHF97jgCfptpuigbb53Lo95g',
-
-  'BTC/USDC': 'A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw',
-  'ETH/USDC': '4tSvZvnbyzHXLMTiFonMyxZoHmFqau1XArcRCVHLZ5gX',
+  'HAMS/USDC': '5j6hdwx4eW3QBYZtRjKiUj7aDA1dxDpveSHBznwq7kUv',
+  'CATO/USDC': '9fe1MWiKqUdwift3dEpxuRHWftG72rysCRHbxDy6i9xB',
+  'SAIL/USDC': '6hwK66FfUdyhncdQVxWFPRqY8y6usEvzekUaqtpKEKLr',
+  'GSAIL/USDC': '2zkPyHgQkKG6qJED6MTbjfCfUbZeT9VFwLm1Ld9nKxRp',
   'SOL/USDC': '9wFFyRfZBsuAha4YcuxcXLKwMxJR43S7fPfQLusDBzvT',
-  'SRM/USDC': 'ByRys5tuUWDgL73G8JBAEfkdFf8JWBzPBDHsBVQ5vbQA',
-
-  'MCAPS/USDC': 'GgzXqy6agt7nnfoPjAEAFpWqnUwLBK5r2acaAQqXiEM8',
-  'MNGO/USDC': '3d4rzwpy9iGdCZvgxcu7B1YocYffVLsQXPXkBZKt2zLc',
-
-  'USDT/USDC': '77quYg4MGneUdjgXCunt9GgM1usmrxKY31twEy3WHwcS',
-  'FTT/USDC': '2Pbh1CvRVku1TgewMfycemghf6sU9EyuFDcNXqvRmSxc',
-  'RAY/USDC': '2xiv8A5xrJ7RnGdxXB42uFEkYHJjszEhaJyKKt4WaLep',
-  'COPE/USDC': '6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk',
-  'SBR/USDC': 'HXBi8YBwbh4TXF6PjVw81m8Z3Cc4WBofvauj5SBFdgUs',
-  'STEP/USDC': '97qCB4cAVSTthvJu3eNoEx6AY6DLuRDtCoPm5Tdyg77S',
-
-  /*
-  'CCAI/USDC': '7gZNLDbWE73ueAoHuAeFoSu7JqmorwCLpNTBXHtYSFTa',
+  'ETH/USDC': '4tSvZvnbyzHXLMTiFonMyxZoHmFqau1XArcRCVHLZ5gX',
+  'BTC/USDC': 'A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw',
   'FIDA/USDC': 'E14BKBhDWD4EuTkWj1ooZezesGxMW8LPCps4W5PuzZJo',
-  'MER/USDC': 'G4LcexdCzzJUKZfqyVDQFzpkjhB1JoCNL8Kooxi9nJz5',
-  'renDOGE/USDC': '5FpKCWYXgHWZ9CdDMHjwxAfqxJLdw2PRXuAmtECkzADk',
-  'SLRS/USDC': '2Gx3UfV831BAh8uQv1FKSPKS9yajfeeD8GJ4ZNb2o2YP',
-  'SNY/USDC': 'DPfj2jYwPaezkCmUNm5SSYfkrkz8WFqwGLcxDDUsN3gA',
+  'RAY/USDC': '2xiv8A5xrJ7RnGdxXB42uFEkYHJjszEhaJyKKt4WaLep',
+  'SRM/USDC': 'ByRys5tuUWDgL73G8JBAEfkdFf8JWBzPBDHsBVQ5vbQA',
   'TULIP/USDC': '8GufnKq7YnXKhnB3WNhgy5PzU9uvHbaaRrZWQK6ixPxW',
-  */
+  'SBR/USDC': 'HXBi8YBwbh4TXF6PjVw81m8Z3Cc4WBofvauj5SBFdgUs',
+  'SAMO/USDC': 'FR3SPJmgfRSKKQ2ysUZBu7vJLpzTixXnjzb84bY3Diif',
+  'LIQ/USDC': 'FLKUQGh9VAG4otn4njLPUf5gaUPx5aAZ2Q6xWiD3hH5u',
+  'KIN/USDC': 'Bn6NPyr6UzrFAwC4WmvPvDr2Vm8XSUnFykM2aQroedgn',
+  'MER/USDC': 'G4LcexdCzzJUKZfqyVDQFzpkjhB1JoCNL8Kooxi9nJz5',
+  'STEP/USDC': '97qCB4cAVSTthvJu3eNoEx6AY6DLuRDtCoPm5Tdyg77S',
+  'COPE/USDC': '6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk',
+ 'LIKE/USDC': '3WptgZZu34aiDrLMUiPntTYZGNZ72yT1yxHYxSdbTArX',
+
+ 'BTC/USDT': 'C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4',
+ 'ETH/USDT': '7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF',
+ 'SOL/USDT': 'HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1',
+ 'SRM/USDT': 'AtNnsY1AyRERWJ8xCskfz38YdvruWVJQUVXgScC1iPb',
+ 'RAY/USDT': 'teE55QrL4a4QSfydR9dnHF97jgCfptpuigbb53Lo95g',
+ 'USDT/USDC': '77quYg4MGneUdjgXCunt9GgM1usmrxKY31twEy3WHwcS',
+ 'FTT/USDC': '2Pbh1CvRVku1TgewMfycemghf6sU9EyuFDcNXqvRmSxc',
+ 'KIN/USDT': '4nCFQr8sahhhL4XJ7kngGFBmpkmyf3xLzemuMhn6mWTm',
+ 'SNY/USDC': 'DPfj2jYwPaezkCmUNm5SSYfkrkz8WFqwGLcxDDUsN3gA',
+ 'BOP/USDC': '7MmPwD1K56DthW14P1PnWZ4zPCbPWemGs3YggcT1KzsM',
+ 'BOP/RAY': '6Fcw8aEs7oP7YeuMrM2JgAQUotYxa4WHKHWdLLXssA3R',
+ 'DAL/USDT': '5BdxDDTm5G3zFC3DvGrr1nnN95ifE7RDnkdCM11xYCEV',
+ 'DAL/USDC': 'J5EzuaPHiB2zJ2aTfsm5gTSGsBWQbWXc13RBcmiuw1E7',
+ 'TUTL/SOL': 'CtLUvMyGDEP9dkwo9yR93s4H7eibUpUHmVUd9YSKJsPJ',
+ 'INO/USDC': 'HyERWE8TEQmDX157oLEpwaTc59ECzmvjUgZhZ2RNtNdn',
+ 'MEDIA/USDC': 'FfiqqvJcVL7oCCu8WQUMHLUC2dnHQPAPjTdSzsERFWjb',
+ 'LIQ/SOL': 'F7SrwFTQ8uWBs9zhN9fctLKLJdEAz8fu7XmNyi9Sebht',
+ 'SLIM/SOL': 'GekRdc4eD9qnfPTjUMK5NdQDho8D9ByGrtnqhMNCTm36',
+ 'MOLA/USDC': 'HSpeWWRqBJ4HH2FPyfDhoN1AUq3gYoDenQGZASSqzYW1',
+ 'SNOWSHOE/USDC': '56ZFVzqMqtDmyry9bK7vi1szUV2nuQ4kT6CzFAB649wE',
+ 'SHBL/USDC': '9G2bAA5Uv8JyPZteuP73GJLUGg5CMbhMLCRSBUBLoXyt',
+ 'JOKE/USDC': '3dFAa6MP8RToK7oLQEns1zzWLp7mEPLx4xrV7WTZ4WZW',
+ 'TUTL/USDC': 'BE475cb7v35FSRNzDGju1ijcqR7dZMiMcG9hjjYpikQn',
+ 'BOLE/USDC': '9yGqsboBtvztDgGbGFEaBBT2G8dUMhxewXDQpy6T3eDm',
+ 'SRM/SOL': 'jyei9Fpj2GtHLDDGgcuhDacxYLLiSyxU4TY7KxB2xai',
+ 'RAY/SRM': 'Cm4MmknScg7qbKqytb1mM92xgDxv3TNXos4tKbBqTDy7',
+ 'SLRS/USDC': '2Gx3UfV831BAh8uQv1FKSPKS9yajfeeD8GJ4ZNb2o2YP',
+ 'APEX/USDC': 'GX26tyJyDxiFj5oaKvNB9npAHNgdoV9ZYHs5ijs5yG2U',
+ 'GÜ/USDC': '2QXXnRnSBi4tviNUAsYv7tYDvYb17BQhK5MxR4sX5J3B',
+ 'SAMO/RAY': 'AAfgwhNU5LMjHojes1SFmENNjihQBDKdDDT1jog4NV8w',
+ 'MER/USDT': '6HwcY27nbeb933UkEcxqJejtjWLfNQFWkGCjAVNes6g7',
+ 'ORCA/USDС': '8N1KkhaCYDpj3awD58d85n973EwkpeYnRp84y1kdZpMX',
+ 'TOX/USDC': '5DgXgvgTnXzg12xJCRQnRmqWV4nNaRGabPM7ALcCaZby',
 }
 
 const symbolsByPk = Object.assign(
@@ -151,74 +165,6 @@ function collectMarketData(programId: string, markets: Record<string, string>) {
 
 collectMarketData(programIdV3, nativeMarketsV3)
 
-const groupConfig = Config.ids().getGroup('mainnet', 'mainnet.1') as GroupConfig
-
-async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
-  const connection = new Connection(
-    'https://mango.rpcpool.com',
-    'processed' as Commitment
-  )
-
-  const store = await createRedisStore(r, m.name)
-  const mangoClient = new MangoClient(connection, groupConfig!.mangoProgramId)
-  const mangoGroup = await mangoClient.getMangoGroup(groupConfig!.publicKey)
-  const perpMarket = await mangoGroup.loadPerpMarket(
-    connection,
-    m.marketIndex,
-    m.baseDecimals,
-    m.quoteDecimals
-  )
-
-  async function fetchTrades(lastSeqNum?: BN): Promise<[Trade[], BN]> {
-    const now = Date.now()
-
-    const eventQueue = await perpMarket.loadEventQueue(connection)
-    const events = eventQueue.eventsSince(lastSeqNum || new BN(0))
-
-    const trades = events
-      .map((e) => e.fill)
-      .filter((e) => !!e)
-      .map((e) => perpMarket.parseFillEvent(e))
-      .map((e) => {
-        return {
-          price: e.price,
-          side: e.takerSide === 'buy' ? TradeSide.Buy : TradeSide.Sell,
-          size: e.quantity,
-          ts: e.timestamp.toNumber() * 1000,
-        }
-      })
-
-    return [trades, eventQueue.seqNum as any]
-  }
-
-  async function storeTrades(ts: Trade[]) {
-    if (ts.length > 0) {
-      console.log(m.name, ts.length)
-      for (let i = 0; i < ts.length; i += 1) {
-        await store.storeTrade(ts[i])
-      }
-    }
-  }
-
-  while (true) {
-    try {
-      const lastSeqNum = await store.loadNumber('LASTSEQ')
-      const [trades, currentSeqNum] = await fetchTrades(new BN(lastSeqNum || 0))
-      storeTrades(trades)
-      store.storeNumber('LASTSEQ', currentSeqNum.toString() as any)
-    } catch (err) {
-      console.error(m.name, err.toString())
-    }
-    await sleep({
-      Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10,
-    })
-  }
-}
-
-groupConfig.perpMarkets.forEach((m) =>
-  collectPerpEventQueue({ host, port, password, db: 0 }, m)
-)
-
 const max_conn = parseInt(process.env.REDIS_MAX_CONN || '') || 200
 const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
@@ -238,26 +184,6 @@ app.get('/tv/config', async (req, res) => {
   res.send(response)
 })
 
-const priceScales: any = {
-  'BTC/USDC': 1,
-  'BTC-PERP': 1,
-
-  'ETH/USDC': 10,
-  'ETH-PERP': 10,
-
-  'SOL/USDC': 1000,
-  'SOL-PERP': 1000,
-
-  'SRM/USDC': 1000,
-  'SRM-PERP': 1000,
-
-  'MNGO/USDC': 10000,
-  'MNGO-PERP': 10000,
-
-  'USDT/USDC': 10000,
-  'USDT-PERP': 10000,
-}
-
 app.get('/tv/symbols', async (req, res) => {
   const symbol = req.query.symbol as string
   const response = {
@@ -266,13 +192,13 @@ app.get('/tv/symbols', async (req, res) => {
     description: symbol,
     type: 'Spot',
     session: '24x7',
-    exchange: 'Mango',
-    listed_exchange: 'Mango',
+    exchange: 'HAMS Dex',
+    listed_exchange: 'HAMS Dex',
     timezone: 'Etc/UTC',
     has_intraday: true,
     supported_resolutions: Object.keys(resolutions),
     minmov: 1,
-    pricescale: priceScales[symbol] || 100,
+    pricescale: 100,
   }
   res.set('Cache-control', 'public, max-age=360')
   res.send(response)
@@ -281,15 +207,13 @@ app.get('/tv/symbols', async (req, res) => {
 app.get('/tv/history', async (req, res) => {
   // parse
   const marketName = req.query.symbol as string
-  const market =
-    nativeMarketsV3[marketName] ||
-    groupConfig.perpMarkets.find((m) => m.name === marketName)
+  const marketPk = nativeMarketsV3[marketName]
   const resolution = resolutions[req.query.resolution as string] as number
   let from = parseInt(req.query.from as string) * 1000
   let to = parseInt(req.query.to as string) * 1000
 
   // validate
-  const validSymbol = market != undefined
+  const validSymbol = marketPk != undefined
   const validResolution = resolution != undefined
   const validFrom = true || new Date(from).getFullYear() >= 2021
   if (!(validSymbol && validResolution && validFrom)) {
@@ -339,10 +263,7 @@ app.get('/tv/history', async (req, res) => {
 app.get('/trades/address/:marketPk', async (req, res) => {
   // parse
   const marketPk = req.params.marketPk as string
-  const marketName =
-    symbolsByPk[marketPk] ||
-    groupConfig.perpMarkets.find((m) => m.publicKey.toBase58() === marketPk)
-      ?.name
+  const marketName = symbolsByPk[marketPk]
 
   // validate
   const validPk = marketName != undefined

@@ -184,10 +184,11 @@ async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
   )
 
   async function fetchTrades(lastSeqNum?: BN): Promise<[Trade[], BN]> {
+    lastSeqNum ||= new BN(0)
     const now = Date.now()
 
     const eventQueue = await perpMarket.loadEventQueue(connection)
-    const events = eventQueue.eventsSince(lastSeqNum || new BN(0))
+    const events = eventQueue.eventsSince(lastSeqNum)
 
     const trades = events
       .map((e) => e.fill)
@@ -202,7 +203,14 @@ async function collectPerpEventQueue(r: RedisConfig, m: PerpMarketConfig) {
         }
       })
 
-    return [trades, eventQueue.seqNum as any]
+    if (events.length > 0) {
+      const last = events[events.length - 1]
+      const latestSeqNum =
+        last.fill?.seqNum || last.liquidate?.seqNum || last.out?.seqNum
+      lastSeqNum = latestSeqNum
+    }
+
+    return [trades, lastSeqNum as BN]
   }
 
   async function storeTrades(ts: Trade[]) {

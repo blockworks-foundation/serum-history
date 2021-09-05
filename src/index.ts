@@ -109,7 +109,6 @@ const nativeMarketsV3: Record<string, string> = {
   'STEP/USDC': '97qCB4cAVSTthvJu3eNoEx6AY6DLuRDtCoPm5Tdyg77S',
   'COPE/USDC': '6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk',
  'LIKE/USDC': '3WptgZZu34aiDrLMUiPntTYZGNZ72yT1yxHYxSdbTArX',
-
  'BTC/USDT': 'C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4',
  'ETH/USDT': '7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF',
  'SOL/USDT': 'HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1',
@@ -143,6 +142,7 @@ const nativeMarketsV3: Record<string, string> = {
  'MER/USDT': '6HwcY27nbeb933UkEcxqJejtjWLfNQFWkGCjAVNes6g7',
  'ORCA/USDС': '8N1KkhaCYDpj3awD58d85n973EwkpeYnRp84y1kdZpMX',
  'TOX/USDC': '5DgXgvgTnXzg12xJCRQnRmqWV4nNaRGabPM7ALcCaZby',
+ 'SUNNY/USDC': 'Aubv1QBFh4bwB2wbP1DaPW21YyQBLfgjg8L4PHTaPzRc',
 }
 
 const symbolsByPk = Object.assign(

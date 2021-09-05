@@ -71,12 +71,12 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
       console.error(m.marketName, err.toString())
     }
     await sleep({
-      Seconds: process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 10,
+      Seconds: process.env.INTERVAL ? parseInt('15') : 10,
     })
   }
 }
 
-const redisUrl = new URL(process.env.REDISCLOUD_URL || 'redis://localhost:6379')
+const redisUrl = new URL('redis://localhost:6379')
 const host = redisUrl.hostname
 const port = parseInt(redisUrl.port)
 let password: string | undefined
@@ -85,8 +85,7 @@ if (redisUrl.password !== '') {
 }
 
 const network = 'mainnet-beta'
-const clusterUrl =
-  process.env.RPC_ENDPOINT_URL || 'https://api.mainnet-beta.solana.com'
+const clusterUrl = 'https://api.mainnet-beta.solana.com'
 const programIdV3 = '9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin'
 
 const nativeMarketsV3: Record<string, string> = {
@@ -165,7 +164,7 @@ function collectMarketData(programId: string, markets: Record<string, string>) {
 
 collectMarketData(programIdV3, nativeMarketsV3)
 
-const max_conn = parseInt(process.env.REDIS_MAX_CONN || '') || 200
+const max_conn = parseInt('200') || 200
 const redisConfig = { host, port, password, db: 0, max_conn }
 const pool = new TedisPool(redisConfig)
 

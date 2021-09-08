@@ -10,6 +10,7 @@ import {
   Trade,
 } from './interfaces'
 import { Tedis } from 'tedis'
+import LRUCache from 'lru-cache'
 
 export interface RedisConfig {
   host: string
@@ -68,15 +69,28 @@ export class RedisStore implements CandleStore, BufferStore, KeyValStore {
     await this.connection.rpush(this.keyForTrade(t), coder.encode(t))
   }
 
+  async loadTrades(
+    key: string,
+    cache?: LRUCache<string, Trade[]>
+  ): Promise<Trade[]> {
+    const cached = cache?.get(key)
+    if (cached && key != this.keyForDay(Date.now())) return cached
+    const response = await this.connection.lrange(key, 0, -1)
+    const result = response.map((t) => coder.decode(t))
+    cache?.set(key, result)
+    return result
+  }
+
   async loadCandles(
     resolution: number,
     from: number,
-    to: number
+    to: number,
+    cache?: LRUCache<string, Trade[]>
   ): Promise<Candle[]> {
     const keys = this.keysForCandles(resolution, from, to)
-    const tradeRequests = keys.map((k) => this.connection.lrange(k, 0, -1))
+    const tradeRequests = keys.map((k) => this.loadTrades(k, cache))
     const tradeResponses = await Promise.all(tradeRequests)
-    const trades = tradeResponses.flat().map((t) => coder.decode(t))
+    const trades = tradeResponses.flat()
     const candles: Candle[] = []
     while (from + resolution <= to) {
       let candle = batch(trades, from, from + resolution)

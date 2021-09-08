@@ -18,6 +18,7 @@ import {
 } from '@blockworks-foundation/mango-client'
 import BN from 'bn.js'
 import notify from './notify'
+import LRUCache from 'lru-cache'
 
 const redisUrl = new URL(process.env.REDISCLOUD_URL || 'redis://localhost:6379')
 const host = redisUrl.hostname
@@ -39,9 +40,6 @@ const programIdV3 = '9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin'
 const nativeMarketsV3: Record<string, string> = {
   'BTC/USDT': 'C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4',
   'ETH/USDT': '7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF',
-  'SOL/USDT': 'HWHvQhFmJB3NUcu1aihKmrKegfVxBEHzwVX6yZCKEsi1',
-  'SRM/USDT': 'AtNnsY1AyRERWJ8xCskfz38YdvruWVJQUVXgScC1iPb',
-  'RAY/USDT': 'teE55QrL4a4QSfydR9dnHF97jgCfptpuigbb53Lo95g',
 
   'BTC/USDC': 'A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw',
   'ETH/USDC': '4tSvZvnbyzHXLMTiFonMyxZoHmFqau1XArcRCVHLZ5gX',
@@ -250,6 +248,10 @@ const conn = new Tedis({
   password,
 })
 
+const cache = new LRUCache<string, Trade[]>(
+  parseInt(process.env.CACHE_LIMIT ?? '500')
+)
+
 const app = express()
 app.use(cors())
 
@@ -338,7 +340,7 @@ app.get('/tv/history', async (req, res) => {
     if (from == to) {
       to += resolution
     }
-    const candles = await store.loadCandles(resolution, from, to)
+    const candles = await store.loadCandles(resolution, from, to, cache)
     const response = {
       s: 'ok',
       t: candles.map((c) => c.start / 1000),

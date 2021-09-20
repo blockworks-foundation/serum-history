@@ -1,0 +1,2 @@
+web: env WEBHOOK_URL=https://discord.com/api/webhooks/881943164309606421/sib-EX1K1mJYZGMoe_Quoc7Vob8pdmsxiG8vnXjDqkJQkMebvPTGikrRqHlyi8xDdrNg ROLE=web yarn start
+worker: env WEBHOOK_URL=https://discord.com/api/webhooks/881946637784731691/xAskf3QXuj1Oxaq9ixYu1b9kk_LV-DlMF_CyZ-hUwzjbpl4yd2QAXjx391BMYt9uSfE5 ROLE=worker yarn start

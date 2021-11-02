@@ -277,8 +277,20 @@ const priceScales: any = {
   'SOL/USDC': 1000,
   'SOL-PERP': 1000,
 
+  'RAY/USDC': 1000,
+  'RAY-PERP': 1000,
+
   'SRM/USDC': 1000,
   'SRM-PERP': 1000,
+
+  'FTT/USDC': 1000,
+  'FTT-PERP': 1000,
+
+  'COPE/USDC': 1000,
+  'COPE-PERP': 1000,
+
+  'ADA/USDC': 10000,
+  'ADA-PERP': 10000,
 
   'MNGO/USDC': 10000,
   'MNGO-PERP': 10000,

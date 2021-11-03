@@ -242,31 +242,6 @@ if (process.env.ROLE === 'web') {
   )
 }
 
-const conn = new Tedis({
-  host,
-  port,
-  password,
-})
-
-const cache = new LRUCache<string, Trade[]>(
-  parseInt(process.env.CACHE_LIMIT ?? '500')
-)
-
-const app = express()
-app.use(cors())
-
-app.get('/tv/config', async (req, res) => {
-  const response = {
-    supported_resolutions: Object.keys(resolutions),
-    supports_group_request: false,
-    supports_marks: false,
-    supports_search: true,
-    supports_timescale_marks: false,
-  }
-  res.set('Cache-control', 'public, max-age=360')
-  res.send(response)
-})
-
 const priceScales: any = {
   'BTC/USDC': 1,
   'BTC-PERP': 1,
@@ -298,6 +273,43 @@ const priceScales: any = {
   'USDT/USDC': 10000,
   'USDT-PERP': 10000,
 }
+
+const marketStores = {} as any
+
+Object.keys(priceScales).forEach((marketName) => {
+  const conn = new Tedis({
+    host,
+    port,
+    password,
+  })
+
+  marketStores[marketName] = new RedisStore(conn, marketName)
+})
+
+const conn = new Tedis({
+  host,
+  port,
+  password,
+})
+
+const cache = new LRUCache<string, Trade[]>(
+  parseInt(process.env.CACHE_LIMIT ?? '500')
+)
+
+const app = express()
+app.use(cors())
+
+app.get('/tv/config', async (req, res) => {
+  const response = {
+    supported_resolutions: Object.keys(resolutions),
+    supports_group_request: false,
+    supports_marks: false,
+    supports_search: true,
+    supports_timescale_marks: false,
+  }
+  res.set('Cache-control', 'public, max-age=360')
+  res.send(response)
+})
 
 app.get('/tv/symbols', async (req, res) => {
   const symbol = req.query.symbol as string
@@ -342,7 +354,7 @@ app.get('/tv/history', async (req, res) => {
 
   // respond
   try {
-    const store = new RedisStore(conn, marketName)
+    const store = marketStores[marketName] as RedisStore
 
     // snap candle boundaries to exact hours
     from = Math.floor(from / resolution) * resolution
@@ -390,7 +402,7 @@ app.get('/trades/address/:marketPk', async (req, res) => {
 
   // respond
   try {
-    const store = new RedisStore(conn, marketName)
+    const store = marketStores[marketName] as RedisStore
     const trades = await store.loadRecentTrades()
     const response = {
       success: true,

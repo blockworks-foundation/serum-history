@@ -19,6 +19,7 @@ import {
 import BN from 'bn.js'
 import notify from './notify'
 import LRUCache from 'lru-cache'
+import * as dayjs from 'dayjs'
 
 const redisUrl = new URL(process.env.REDISCLOUD_URL || 'redis://localhost:6379')
 const host = redisUrl.hostname
@@ -264,15 +265,19 @@ const priceScales: any = {
   'COPE/USDC': 1000,
   'COPE-PERP': 1000,
 
-  'ADA/USDC': 10000,
+  // 'ADA/USDC': 10000,
   'ADA-PERP': 10000,
 
   'MNGO/USDC': 10000,
   'MNGO-PERP': 10000,
 
   'USDT/USDC': 10000,
-  'USDT-PERP': 10000,
+  // 'USDT-PERP': 10000,
 }
+
+const cache = new LRUCache<string, Trade[]>(
+  parseInt(process.env.CACHE_LIMIT ?? '500')
+)
 
 const marketStores = {} as any
 
@@ -283,18 +288,18 @@ Object.keys(priceScales).forEach((marketName) => {
     password,
   })
 
-  marketStores[marketName] = new RedisStore(conn, marketName)
-})
+  const store = new RedisStore(conn, marketName)
+  marketStores[marketName] = store
 
-const conn = new Tedis({
-  host,
-  port,
-  password,
+  // preload heavy markets
+  if (['SOL/USDC', 'SOL-PERP', 'BTC-PERP'].includes(marketName)) {
+    for (let i = 1; i < 60; ++i) {
+      const day = dayjs.default().subtract(i, 'days')
+      const key = store.keyForDay(+day)
+      store.loadTrades(key, cache).then(() => console.log('loaded', key))
+    }
+  }
 })
-
-const cache = new LRUCache<string, Trade[]>(
-  parseInt(process.env.CACHE_LIMIT ?? '500')
-)
 
 const app = express()
 app.use(cors())

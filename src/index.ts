@@ -296,7 +296,10 @@ Object.keys(priceScales).forEach((marketName) => {
     for (let i = 1; i < 60; ++i) {
       const day = dayjs.default().subtract(i, 'days')
       const key = store.keyForDay(+day)
-      store.loadTrades(key, cache).then(() => console.log('loaded', key))
+      store
+        .loadTrades(key, cache)
+        .then(() => console.log('loaded', key))
+        .catch(() => console.error('could not cache', key))
     }
   }
 })

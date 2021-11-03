@@ -87,7 +87,7 @@ export class RedisStore implements CandleStore, BufferStore, KeyValStore {
     to: number,
     cache?: LRUCache<string, Trade[]>
   ): Promise<Candle[]> {
-    const keys = this.keysForCandles(resolution, from, to)
+    const keys = this.keysForCandles(resolution, from, to).slice(-15)
     const tradeRequests = keys.map((k) => this.loadTrades(k, cache))
     const tradeResponses = await Promise.all(tradeRequests)
     const trades = tradeResponses.flat()

@@ -7,11 +7,35 @@ Feel free to improve and extend for the benefit for the larger solana ecosystem.
 ** Note: This does not include a functioning trading view to inspect the
 data.** Check the [mango markets gui code](https://github.com/blockworks-foundation/mango-ui-v2/blob/main/components/TradingView/index.tsx) for a reference how to use this API to display a TradingView.
 
+## Installation
+
+To run this project you first need to install Redis, you can use these [Installation Instructions](https://redis.io/docs/getting-started/#install-redis) if you do not already have it installed.
+
+Next you will need to install the required node_modules using either npm or yarn.
+
+Using npm:
+
+```
+npm install
+```
+
+Using yarn:
+
+```
+yarn 
+```
+
+To run the project in developer mode:
+
+```
+npm run dev
+```
+
 ## Configuration
 
-* Markets: should be added to the dictionaries in src/index.ts
-  marketsV3 - for wrapped token denominated markets (deprecated)
-  nativeMarketsV3 - for native token denominated markets
+* Markets: are configured by using the IDS.json in the Mango client library. To 
+  use a custom list of markets add support for your protocol to loadMarkets in 
+  config.ts.
 
 * All other configuration should be handled via environment variables.
   So far the following variables exist:

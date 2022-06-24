@@ -1,6 +1,4 @@
-
 import { Candle, Trade } from "./interfaces";
-
 
 export function batch(ts: Trade[], start: number, end: number): Candle | undefined {
 

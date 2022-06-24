@@ -1,5 +1,4 @@
-import BN from 'bn.js';
-import { bits, blob, struct, u8, u32, nu64 } from 'buffer-layout';
+import { bits, blob, struct, u8, u32 } from 'buffer-layout';
 import {
   accountFlagsLayout,
   publicKeyLayout,

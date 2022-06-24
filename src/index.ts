@@ -32,11 +32,11 @@ const network = 'mainnet-beta'
 const clusterUrl =
   process.env.RPC_ENDPOINT_URL || 'https://solana-api.projectserum.com'
 const fetchInterval = process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 30
-console.log(clusterUrl);
+console.log(clusterUrl)
 
 console.log({ clusterUrl, fetchInterval })
 
-const protocol: Protocol = 'mango';
+const protocol: Protocol = 'mango'
 
 const programIdV3 = loadProgramId(protocol)
 
@@ -90,7 +90,7 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
           }
         })
       //if (trades.length > 0)
-        //console.log({e: events.map(e => e.eventFlags), takerFills, trades})
+      //console.log({e: events.map(e => e.eventFlags), takerFills, trades})
       return [trades, header.seqNum]
     }
 

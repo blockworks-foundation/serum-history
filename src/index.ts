@@ -36,7 +36,7 @@ console.log(clusterUrl)
 
 console.log({ clusterUrl, fetchInterval })
 
-const protocol: Protocol = 'mango'
+const protocol: Protocol = 'test'
 
 const programIdV3 = loadProgramId(protocol)
 

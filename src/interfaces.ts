@@ -1,4 +1,3 @@
-import BN from 'bn.js'
 import LRUCache from 'lru-cache'
 
 export interface MarketConfig {

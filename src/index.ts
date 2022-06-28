@@ -1,8 +1,8 @@
-import { Account, Commitment, Connection, PublicKey } from '@solana/web3.js'
+import { Commitment, Connection, PublicKey } from '@solana/web3.js'
 import { Market } from '@project-serum/serum'
 import cors from 'cors'
 import express from 'express'
-import { Tedis, TedisPool } from 'tedis'
+import { Tedis } from 'tedis'
 import { URL } from 'url'
 import { decodeRecentEvents } from './events'
 import { MarketConfig, Trade, TradeSide } from './interfaces'
@@ -10,16 +10,15 @@ import { RedisConfig, RedisStore, createRedisStore } from './redis'
 import { resolutions, sleep } from './time'
 import {
   Config,
-  getMarketByBaseSymbolAndKind,
   GroupConfig,
   MangoClient,
   PerpMarketConfig,
-  FillEvent,
 } from '@blockworks-foundation/mango-client'
 import BN from 'bn.js'
 import notify from './notify'
 import LRUCache from 'lru-cache'
 import * as dayjs from 'dayjs'
+import { loadMarkets, loadProgramId, Protocol } from './config'
 
 const redisUrl = new URL(process.env.REDISCLOUD_URL || 'redis://localhost:6379')
 const host = redisUrl.hostname
@@ -33,40 +32,15 @@ const network = 'mainnet-beta'
 const clusterUrl =
   process.env.RPC_ENDPOINT_URL || 'https://solana-api.projectserum.com'
 const fetchInterval = process.env.INTERVAL ? parseInt(process.env.INTERVAL) : 30
+console.log(clusterUrl)
 
 console.log({ clusterUrl, fetchInterval })
 
-const programIdV3 = '9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin'
+const protocol: Protocol = 'test'
 
-const nativeMarketsV3: Record<string, string> = {
-  'BTC/USDT': 'C1EuT9VokAKLiW7i2ASnZUvxDoKuKkCpDDeNxAptuNe4',
-  'ETH/USDT': '7dLVkUfBVfCGkFhSXDCq1ukM9usathSgS716t643iFGF',
+const programIdV3 = loadProgramId(protocol)
 
-  'BTC/USDC': 'A8YFbxQYFVqKZaoYJLLUVcQiWP7G2MeEgW5wsAQgMvFw',
-  'ETH/USDC': '4tSvZvnbyzHXLMTiFonMyxZoHmFqau1XArcRCVHLZ5gX',
-  'SOL/USDC': '9wFFyRfZBsuAha4YcuxcXLKwMxJR43S7fPfQLusDBzvT',
-  'SRM/USDC': 'ByRys5tuUWDgL73G8JBAEfkdFf8JWBzPBDHsBVQ5vbQA',
-
-  'MCAPS/USDC': 'GgzXqy6agt7nnfoPjAEAFpWqnUwLBK5r2acaAQqXiEM8',
-  'MNGO/USDC': '3d4rzwpy9iGdCZvgxcu7B1YocYffVLsQXPXkBZKt2zLc',
-
-  'USDT/USDC': '77quYg4MGneUdjgXCunt9GgM1usmrxKY31twEy3WHwcS',
-  'FTT/USDC': '2Pbh1CvRVku1TgewMfycemghf6sU9EyuFDcNXqvRmSxc',
-  'RAY/USDC': '2xiv8A5xrJ7RnGdxXB42uFEkYHJjszEhaJyKKt4WaLep',
-  'COPE/USDC': '6fc7v3PmjZG9Lk2XTot6BywGyYLkBQuzuFKd4FpCsPxk',
-  'SBR/USDC': 'HXBi8YBwbh4TXF6PjVw81m8Z3Cc4WBofvauj5SBFdgUs',
-  'STEP/USDC': '97qCB4cAVSTthvJu3eNoEx6AY6DLuRDtCoPm5Tdyg77S',
-
-  /*
-  'CCAI/USDC': '7gZNLDbWE73ueAoHuAeFoSu7JqmorwCLpNTBXHtYSFTa',
-  'FIDA/USDC': 'E14BKBhDWD4EuTkWj1ooZezesGxMW8LPCps4W5PuzZJo',
-  'MER/USDC': 'G4LcexdCzzJUKZfqyVDQFzpkjhB1JoCNL8Kooxi9nJz5',
-  'renDOGE/USDC': '5FpKCWYXgHWZ9CdDMHjwxAfqxJLdw2PRXuAmtECkzADk',
-  'SLRS/USDC': '2Gx3UfV831BAh8uQv1FKSPKS9yajfeeD8GJ4ZNb2o2YP',
-  'SNY/USDC': 'DPfj2jYwPaezkCmUNm5SSYfkrkz8WFqwGLcxDDUsN3gA',
-  'TULIP/USDC': '8GufnKq7YnXKhnB3WNhgy5PzU9uvHbaaRrZWQK6ixPxW',
-  */
-}
+const nativeMarketsV3: Record<string, string> = loadMarkets(protocol)
 
 const symbolsByPk = Object.assign(
   {},
@@ -115,10 +89,8 @@ async function collectEventQueue(m: MarketConfig, r: RedisConfig) {
             ts: now,
           }
         })
-      /*
-    if (trades.length > 0)
-      console.log({e: events.map(e => e.eventFlags), takerFills, trades})
-    */
+      //if (trades.length > 0)
+      //console.log({e: events.map(e => e.eventFlags), takerFills, trades})
       return [trades, header.seqNum]
     }
 
